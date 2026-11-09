@@ -43,19 +43,37 @@ def router_up_script(net: Network, router: str) -> str:
     if site:
         wg = site["wireguard"]
         port = net.data["tunnel"]["port"]
-        endpoint_port = wg.get("port", port)
         lines += [
             "nft -f /pp/ruleset.nft",
+            "# The private key is generated here and never leaves this router: the lab runner",
+            "# reads only the public key (wg show wg0 public-key) and hands it to the peer.",
+            "umask 077",
+            "wg genkey > /run/pp-wg.key",
+            "umask 022",
             f"ip link show {TUNNEL_IF} >/dev/null 2>&1 || ip link add {TUNNEL_IF} type wireguard",
-            f"wg set {TUNNEL_IF} listen-port {port} private-key /pp-keys/private.key",
-            f'wg set {TUNNEL_IF} peer "$(cat /pp-keys/peer.pub)" endpoint {wg["endpoint"]}:{endpoint_port} '
-            f'allowed-ips {",".join(wg["allowed_ips"])} persistent-keepalive 25',
+            f"wg set {TUNNEL_IF} listen-port {port} private-key /run/pp-wg.key",
             f"ip addr replace {wg['address']} dev {TUNNEL_IF}",
             f"ip link set {TUNNEL_IF} mtu {net.data['tunnel']['mtu']} up",
             "dropbear -R -p 22",
+            "touch /tmp/pp-up-done",
         ]
-    lines.append("touch /tmp/pp-ready")
+    else:
+        lines.append("touch /tmp/pp-ready")
     return "\n".join(lines) + "\n"
+
+
+def wg_peer_script(net: Network, site: dict) -> str:
+    """Run by the lab runner with the peer's public key once both routers are up."""
+    wg = site["wireguard"]
+    port = wg.get("port", net.data["tunnel"]["port"])
+    return "\n".join([
+        "#!/bin/sh",
+        f"# Rendered by packetproof for {site['router']}. Usage: wg-peer.sh PEER_PUBLIC_KEY",
+        "set -eu",
+        f'wg set {TUNNEL_IF} peer "$1" endpoint {wg["endpoint"]}:{port} '
+        f'allowed-ips {",".join(wg["allowed_ips"])} persistent-keepalive 25',
+        "touch /tmp/pp-ready",
+    ]) + "\n"
 
 
 def topology(net: Network) -> str:
@@ -72,8 +90,6 @@ def topology(net: Network) -> str:
                 f"        - routers/{r}/daemons:/etc/frr/daemons",
                 f"        - routers/{r}/vtysh.conf:/etc/frr/vtysh.conf",
                 f"        - routers/{r}:/pp:ro"]
-        if r in net.site_by_router:
-            out.append(f"        - keys/{r}:/pp-keys:ro")
         out += ["      exec:", "        - sh /pp/up.sh"]
     for zone in net.zones:
         out += [f"    {bridge_name(zone)}:", "      kind: bridge"]
@@ -123,6 +139,7 @@ def render(net: Network, out: Path) -> None:
         _write(d / "ruleset.nft", render_nft.ruleset(net, s))
         ifaces = [UPLINK_IF] + [i.name for i in net.router_ifaces(r)] + ["lo", TUNNEL_IF]
         _write(out / "batfish" / "configs" / f"{r}.cfg", render_frr.batfish_file(r, conf, ifaces))
+        _write(d / "wg-peer.sh", wg_peer_script(net, s))
         if s["wireguard"].get("peer_public_key"):
             _write(d / "peer.pub.override", s["wireguard"]["peer_public_key"] + "\n")
     isp = net.data["isp"]["name"]

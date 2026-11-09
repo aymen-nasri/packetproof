@@ -37,15 +37,17 @@ def test_wrong_name_refused(lab):
     assert "hostname mismatch" in out, out[-600:]
 
 
-def _serve_and_verify(lab, cert: str, port: int) -> str:
+def _serve_and_verify(lab, cert: str, port: int, chain: str = "") -> str:
+    chain_opt = f"-cert_chain {chain}" if chain else ""
     lab.bg("client-a", f"timeout 15 openssl s_server -accept 127.0.0.1:{port} -cert /shared/pki/test/{cert}.crt "
-                       f"-key /shared/pki/test/{cert}.key -www")
+                       f"-key /shared/pki/test/{cert}.key {chain_opt} -www")
     lab.sh("client-a", "sleep 2")
     return _verify(lab, f"127.0.0.1:{port}", f"www.{ZONE}")
 
 
 def test_expired_certificate_refused(lab):
-    out = _serve_and_verify(lab, "expired", 8443)
+    # Served with the lab intermediate, so the only thing wrong is the date.
+    out = _serve_and_verify(lab, "expired", 8443, chain="/shared/pki/intermediate_ca.crt")
     assert "certificate has expired" in out, out[-600:]
 
 

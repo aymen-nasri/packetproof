@@ -14,8 +14,7 @@ def _open_ports(nmap_output: str) -> list[str]:
 
 
 def _scan_from_dmz(lab, target: str) -> list[str]:
-    out = lab.dmz(f"nmap -Pn -sT -n -T4 --max-retries 1 --host-timeout 60s --top-ports 100 {target}", timeout=180)
-    return _open_ports(out.stdout)
+    return _open_ports(lab.nmap_from_dmz(target))
 
 
 def _not_open(results: dict[str, str]) -> bool:
@@ -105,7 +104,7 @@ def test_ap12_spoofed_source_into_db(lab):
     assert lab.tcp("app1", DB, 5432) == "open", "legitimate pair failed: real app1 -> db:5432"
     before = lab.nft_counter("rtr-a", "inet pp antispoof")
     lab.capture("db", "ap12", f"src host {APP1} and src port 31337", 8)
-    lab.dmz(f"pp-probe.py spoof {APP1} {DB} 5432 --sport 31337 --count 3")
+    lab.spoof_from("dmz", APP1, DB, 5432)
     time.sleep(7)
     seen = lab.captured("db", "ap12")
     after = lab.nft_counter("rtr-a", "inet pp antispoof")

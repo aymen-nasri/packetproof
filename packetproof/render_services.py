@@ -198,6 +198,7 @@ def ca_lines(net: Network) -> list[str]:
         f'"$STEP" certificate create www.{zone} /shared/pki/test/untrusted.crt /shared/pki/test/untrusted.key '
         "--profile leaf --ca /tmp/untrusted-root.crt --ca-key /tmp/untrusted-root.key --no-password --insecure",
         "cat /shared/pki/test/expired.crt /shared/pki/test/expired.key > /shared/pki/test/expired.pem",
+        "cp /tmp/step/certs/intermediate_ca.crt /shared/pki/intermediate_ca.crt",
         "chmod 0644 /shared/pki/test/*",
         # Publishing the root last tells everyone else the CA is ready.
         _wait_for_port(port),
