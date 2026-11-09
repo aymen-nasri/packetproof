@@ -241,13 +241,16 @@ def wg_up_script(name: str, r: dict) -> str:
     allowed = ",".join(wg["allowed_ips"])
     return f"""#!/bin/sh
 # Rendered by week1/render.py for {name}. Keys come from /etc/wireguard (mounted at run time).
-set -eu
-ip link add wg0 type wireguard
-wg set wg0 listen-port 51820 private-key /etc/wireguard/private.key \\
-  peer "$(cat /etc/wireguard/peer.pub)" endpoint {wg['endpoint']} \\
-  allowed-ips {allowed} persistent-keepalive 25
+# Every command and error goes to /tmp/wg-up.log (containerlab only reports stdout). The key
+# itself is never echoed: it is passed as a file path.
+exec >/tmp/wg-up.log 2>&1
+set -eux
+ip link show wg0 >/dev/null 2>&1 || ip link add wg0 type wireguard
+wg set wg0 listen-port 51820 private-key /etc/wireguard/private.key
+wg set wg0 peer "$(cat /etc/wireguard/peer.pub)" endpoint {wg['endpoint']} allowed-ips {allowed} persistent-keepalive 25
 ip addr replace {wg['address']} dev wg0
 ip link set wg0 mtu 1420 up
+wg show wg0 | grep -v 'private key'
 """
 
 

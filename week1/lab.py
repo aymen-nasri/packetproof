@@ -183,8 +183,8 @@ def save_evidence(lab: str, meta: dict, evidence: Path, deploy_log: str) -> None
         if "wg" in routers[node]:
             # `wg show` prints public keys only; the private key is shown as "(hidden)".
             parts = []
-            for cmd in (["ip", "-d", "link", "show", "wg0"], ["wg", "show", "wg0"], ["ls", "-ln", "/etc/wireguard"],
-                        ["id"]):
+            for cmd in (["cat", "/tmp/wg-up.log"], ["ip", "-d", "link", "show", "wg0"], ["wg", "show", "wg0"],
+                        ["ls", "-ln", "/etc/wireguard"], ["id"]):
                 res = dexec(lab, node, *cmd)
                 parts.append(f"$ {' '.join(cmd)}\n{res.stdout}{res.stderr}rc={res.returncode}\n")
             (evidence / f"{node}.wireguard.txt").write_text("\n".join(parts))
