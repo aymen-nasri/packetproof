@@ -1,16 +1,10 @@
 name: go-no-go
 
 # Week 1: the five go/no-go tests of docs/method.md, part 1 (test E runs on the laptop).
-# The verdict job applies the GO rules exactly as written there.
+# The verdict job applies the GO rules exactly as written there. Week 1 is recorded in
+# docs/go-no-go.md, so this now runs only on demand.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "week1/**"
-      - "images/router/**"
-      - ".github/actions/setup-lab/**"
-      - ".github/workflows/gonogo.yml"
 
 permissions: {}
 
