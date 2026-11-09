@@ -5,10 +5,17 @@
   pp-probe.py spoof SRC DST DPORT [--sport N] [--count N]
                                             sends TCP SYNs with a forged source address
                                             (a harmless decoy packet; no payload)
+  pp-probe.py hold URL --seconds N [--cacert F]
+                                            holds ONE keep-alive connection and sends a request
+                                            every 0.2 s; prints JSON: ok, failed, connections
 """
 
 import argparse
 import errno
+import http.client
+import json
+import ssl
+import urllib.parse
 import random
 import socket
 import struct
@@ -59,6 +66,38 @@ def spoof(src: str, dst: str, dport: int, sport: int, count: int) -> None:
         time.sleep(0.2)
 
 
+def hold(url: str, seconds: float, cacert: str | None, interval: float = 0.2) -> dict:
+    u = urllib.parse.urlsplit(url)
+    ctx = ssl.create_default_context(cafile=cacert) if u.scheme == "https" else None
+
+    def connect():
+        if ctx:
+            return http.client.HTTPSConnection(u.hostname, u.port or 443, timeout=2, context=ctx)
+        return http.client.HTTPConnection(u.hostname, u.port or 80, timeout=2)
+
+    stats = {"ok": 0, "failed": 0, "connections": 1, "errors": []}
+    conn = connect()
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        try:
+            conn.request("GET", u.path or "/")
+            resp = conn.getresponse()
+            resp.read()
+            if resp.status == 200:
+                stats["ok"] += 1
+            else:
+                stats["failed"] += 1
+        except Exception as exc:  # any failure counts; reconnect and keep measuring
+            stats["failed"] += 1
+            stats["errors"].append(type(exc).__name__)
+            conn.close()
+            conn = connect()
+            stats["connections"] += 1
+        time.sleep(interval)
+    stats["errors"] = stats["errors"][:10]
+    return stats
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -72,9 +111,15 @@ def main() -> int:
     sp.add_argument("dport", type=int)
     sp.add_argument("--sport", type=int, default=31337)
     sp.add_argument("--count", type=int, default=3)
+    hp = sub.add_parser("hold")
+    hp.add_argument("url")
+    hp.add_argument("--seconds", type=float, default=40)
+    hp.add_argument("--cacert")
     a = ap.parse_args()
     if a.cmd == "tcp":
         print(tcp(a.ip, a.port, a.timeout))
+    elif a.cmd == "hold":
+        print(json.dumps(hold(a.url, a.seconds, a.cacert)))
     else:
         spoof(a.src, a.dst, a.dport, a.sport, a.count)
         print("sent")
