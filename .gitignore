@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# containerlab working directories and rendered output
+clab-*/
+.clab*/
+build/
+out/
+# never commit private keys; test keys are generated at run time
+*.key
+*.age
