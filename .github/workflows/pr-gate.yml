@@ -1,0 +1,76 @@
+name: pr-gate
+
+# Every pull request, and every push to main, must pass the gates. Gate 1 checks the intent and
+# the rendered configs without running them; Gate 2 deploys the whole two-site network in
+# containerlab on this runner and sends real traffic at it.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: pr-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: generator unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt
+      - name: Unit tests
+        run: '"$RUNNER_TEMP/venv/bin/python" -m pytest -q -p no:cacheprovider tests/unit'
+
+  gate2:
+    name: Gate 2 (live copy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      PP_RENDER: build/lab
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-lab
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt
+      - name: Render the network from network.yaml
+        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof render --out "$PP_RENDER"'
+      - name: Deploy the live copy
+        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof deploy --render "$PP_RENDER"'
+      - name: Gate 2 tests
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -v -p no:cacheprovider
+          --junitxml results/gate2.xml
+      - name: Summarise
+        if: ${{ !cancelled() }}
+        run: python3 scripts/junit_summary.py results/gate2.xml "Gate 2 (live copy)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Collect evidence
+        if: ${{ !cancelled() }}
+        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof evidence --render "$PP_RENDER" --out evidence'
+      - name: Destroy the live copy
+        if: always()
+        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof destroy --render "$PP_RENDER"'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: gate2
+          path: |
+            results/
+            evidence/
+          retention-days: 30

@@ -1,0 +1,158 @@
+# PacketProof: the single source of truth.
+#
+# Every router config, firewall ruleset, tunnel, DNS zone, proxy and CA setting, the containerlab
+# topology and the Batfish snapshot are rendered from this file by `python -m packetproof render`.
+# The rules that judge it (policy/*.rego) and the tests that probe it (tests/live) are written by
+# hand, separately, so that a wrong intent here cannot pass both. Address plan: docs/address-plan.md.
+version: 1
+domain: packetproof.example
+
+isp:
+  name: isp
+  asn: 65000
+  router_id: 192.0.2.1
+  outside:
+    prefix: 192.0.2.0/24
+    gateway: 192.0.2.1
+    # The outside user's access line is smaller than 1500, so large replies through NAT need
+    # path MTU discovery to work (ICMP "fragmentation needed" must get back through rtr-a).
+    mtu: 1400
+
+sites:
+  - name: a
+    router: rtr-a
+    asn: 65001
+    router_id: 172.16.255.1
+    loopback: 172.16.255.1/32
+    public_prefix: 198.51.100.64/27
+    nat_address: 198.51.100.66
+    uplink: {address: 198.51.100.1/31, isp_address: 198.51.100.0}
+    zones:
+      - {name: lan-a, prefix: 172.16.10.0/24, gateway: 172.16.10.1}
+      - {name: dmz, prefix: 172.16.20.0/24, gateway: 172.16.20.1}
+      - {name: app, prefix: 172.16.30.0/24, gateway: 172.16.30.1}
+      - {name: db, prefix: 172.16.40.0/24, gateway: 172.16.40.1}
+      - {name: svc, prefix: 172.16.50.0/24, gateway: 172.16.50.1}
+    bgp:
+      isp: {remote_asn: 65000, advertise: [198.51.100.64/27]}
+      tunnel:
+        remote_asn: 65002
+        advertise: [172.16.10.0/24, 172.16.20.0/24, 172.16.30.0/24, 172.16.40.0/24, 172.16.50.0/24, 172.16.255.1/32]
+        accept: [172.24.0.0/16 le 32]
+        default_originate: false
+    static_routes: []
+    wireguard:
+      address: 172.31.255.0/31
+      peer_address: 172.31.255.1
+      endpoint: 203.0.113.1
+      allowed_ips: [172.31.255.1/32, 172.24.0.0/16]
+
+  - name: b
+    router: rtr-b
+    asn: 65002
+    router_id: 172.24.255.1
+    loopback: 172.24.255.1/32
+    public_prefix: 203.0.113.64/27
+    nat_address: 203.0.113.66
+    uplink: {address: 203.0.113.1/31, isp_address: 203.0.113.0}
+    zones:
+      - {name: lan-b, prefix: 172.24.10.0/24, gateway: 172.24.10.1}
+    bgp:
+      isp: {remote_asn: 65000, advertise: [203.0.113.64/27]}
+      tunnel:
+        remote_asn: 65001
+        advertise: [172.24.10.0/24, 172.24.255.1/32]
+        accept: [172.16.0.0/16 le 32]
+        default_originate: false
+    static_routes: []
+    wireguard:
+      address: 172.31.255.1/31
+      peer_address: 172.31.255.0
+      endpoint: 198.51.100.1
+      allowed_ips: [172.31.255.0/32, 172.16.0.0/16]
+
+tunnel:
+  prefix: 172.31.255.0/31
+  port: 51820
+  mtu: 1420          # 1500 minus 80 bytes of WireGuard over IPv4/UDP overhead, with margin
+
+hosts:
+  - {name: client-a, zone: lan-a, address: 172.16.10.10, role: client}
+  - {name: admin, zone: lan-a, address: 172.16.10.20, role: admin}
+  - {name: mon, zone: lan-a, address: 172.16.10.30, role: monitor}
+  - {name: haproxy, zone: dmz, address: 172.16.20.10, role: proxy}
+  - {name: ns1, zone: dmz, address: 172.16.20.53, role: dns-authoritative}
+  - {name: app1, zone: app, address: 172.16.30.11, role: app}
+  - {name: app2, zone: app, address: 172.16.30.12, role: app}
+  - {name: db, zone: db, address: 172.16.40.10, role: db}
+  - {name: resolver, zone: svc, address: 172.16.50.53, role: dns-resolver}
+  - {name: ca, zone: svc, address: 172.16.50.10, role: ca}
+  - {name: client-b, zone: lan-b, address: 172.24.10.10, role: client}
+  - {name: outside, zone: outside, address: 192.0.2.10, role: outside}
+
+# The complete allow list between zones. Everything not listed is dropped (INV-12).
+# Endpoints: zone:<name>, host:<name>, internet, or all (every host and router).
+flows:
+  - {name: users-to-web, from: [zone:lan-a, zone:lan-b], to: [host:haproxy], tcp: [443]}
+  - {name: users-to-dns, from: [zone:lan-a, zone:lan-b], to: [host:resolver], udp: [53], tcp: [53]}
+  - {name: users-to-internet, from: [zone:lan-a, zone:lan-b], to: [internet], tcp: [80, 443]}
+  - {name: admin-ssh, from: [host:admin], to: [all], tcp: [22]}
+  - {name: proxy-to-app, from: [host:haproxy], to: [host:app1, host:app2], tcp: [8080]}
+  - {name: acme-order, from: [host:haproxy], to: [host:ca], tcp: [9000]}
+  - {name: acme-challenge, from: [host:ca], to: [host:haproxy], tcp: [80]}
+  - {name: app-to-db, from: [zone:app], to: [host:db], tcp: [5432]}
+  - {name: app-to-dns, from: [zone:app], to: [host:resolver], udp: [53], tcp: [53]}
+  - {name: resolver-to-internet, from: [host:resolver], to: [internet], udp: [53], tcp: [53]}
+
+nat:
+  # Source NAT for internet-bound traffic from each site's user zones.
+  snat:
+    - {site: a, from: [lan-a, svc], to: 198.51.100.66}   # svc: the resolver's queries to the internet
+    - {site: b, from: [lan-b], to: 203.0.113.66}
+  # Each port-forward publishes one service: DNAT plus the matching forward accept.
+  port_forwards:
+    - {site: a, public: 198.51.100.65, tcp: [443], to: haproxy}
+    - {site: a, public: 198.51.100.65, udp: [53], tcp: [53], to: ns1}
+
+dns:
+  zone: packetproof.example
+  # What the resolver answers to inside clients (split horizon: the inside view).
+  inside:
+    www: haproxy
+    haproxy: haproxy
+    ns1: ns1
+    app1: app1
+    app2: app2
+    db: db
+    ca: ca
+    resolver: resolver
+    admin: admin
+  # What ns1 answers to the internet (the outside view).
+  outside:
+    www: 198.51.100.65
+    ns1: 198.51.100.65
+  recursion_for: [lan-a, lan-b, app]
+  local_only_for: [svc]          # answered from inside data, never recursed
+  forwarders: {example.net: 192.0.2.10}
+
+pki:
+  ca: ca
+  port: 9000
+  certificates:
+    - {host: haproxy, names: [www.packetproof.example]}
+
+proxy:
+  host: haproxy
+  listen: 443
+  certificate: www.packetproof.example
+  backends:
+    - {host: app1, port: 8080}
+    - {host: app2, port: 8080}
+  health_check: {path: /health, inter_ms: 1000, fall: 2, rise: 2}
+
+monitoring:
+  host: mon
+  probes:
+    - {name: www-https, kind: http, target: "https://www.packetproof.example/"}
+    - {name: www-tls-expiry, kind: tls, target: "www.packetproof.example:443"}
+    - {name: dns-www, kind: dns, target: "172.16.50.53", query: www.packetproof.example}
