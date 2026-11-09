@@ -130,6 +130,14 @@ def evidence(render_dir: Path, out: Path) -> None:
     for h in net.data["hosts"]:
         res = dexec(h["name"], "sh", "-c", "cat /tmp/pp-start.log; for f in /tmp/*.log; do echo \"== $f\"; tail -n 50 \"$f\"; done")
         (out / f"{h['name']}.txt").write_text(res.stdout + res.stderr)
+    # The runner host: AppArmor profiles attach by path and can confine binaries inside
+    # privileged containers (this is what blocked `wg` from reading its key, see the docs).
+    host = []
+    for cmd in (["sh", "-c", "ls /etc/apparmor.d | grep -iE 'wg|wireguard' || true"],
+                ["sh", "-c", "sudo dmesg | grep -i 'apparmor=\"DENIED\"' | tail -n 20 || true"]):
+        res = run(cmd, check=False)
+        host.append(f"$ {cmd[-1]}\n{res.stdout}{res.stderr}")
+    (out / "runner-host.txt").write_text("\n".join(host))
 
 
 def destroy(render_dir: Path) -> None:
