@@ -1,0 +1,22 @@
+name: setup-lab
+description: Record the runner, install containerlab with its checksum checked, and build the router image.
+runs:
+  using: composite
+  steps:
+    - name: Record the runner
+      shell: bash
+      run: |
+        echo "runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+        echo "kernel: $(uname -r)"
+        echo "docker: $(docker version --format '{{.Server.Version}}')"
+        echo "cpus: $(nproc)  memory: $(free -g | awk '/Mem:/ {print $2}') GB"
+    - name: Install containerlab 0.83.0, checking its checksum
+      shell: bash
+      run: |
+        curl -fsSLo "$RUNNER_TEMP/clab.deb" https://github.com/srl-labs/containerlab/releases/download/v0.83.0/containerlab_0.83.0_linux_amd64.deb
+        echo "679bce04e29f9f96784b6415d04675bb57ab52ffac3a63277f6157ee3635b998  $RUNNER_TEMP/clab.deb" | sha256sum -c
+        sudo apt-get install -y -qq "$RUNNER_TEMP/clab.deb" > /dev/null
+        containerlab version
+    - name: Build the router image
+      shell: bash
+      run: docker build -q -t packetproof/router:w1 images/router

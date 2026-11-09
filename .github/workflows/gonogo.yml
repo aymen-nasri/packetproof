@@ -1,0 +1,183 @@
+name: go-no-go
+
+# Week 1: the five go/no-go tests of docs/method.md, part 1 (test E runs on the laptop).
+# The verdict job applies the GO rules exactly as written there.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "week1/**"
+      - "images/router/**"
+      - ".github/actions/setup-lab/**"
+      - ".github/workflows/gonogo.yml"
+
+permissions: {}
+
+concurrency:
+  group: go-no-go-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BATFISH_IMAGE: batfish/allinone@sha256:54cb0ed94fd9a3c1ca0985f73e5be479e955cee9b9f6a6799b66be3364fd8e5c
+  PYBATFISH_VERSION: "2026.9.17.3748"
+
+jobs:
+  lab:
+    name: tests A and C (run ${{ matrix.run }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5]
+    env:
+      RUN: ${{ matrix.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-lab
+      - name: Test A, deploy w1-bgp and check it
+        run: python3 week1/lab.py --lab w1-bgp --out "results/A-run$RUN.json" --evidence "evidence/A-run$RUN"
+      - name: Test C, deploy w1-wg (BGP over WireGuard) and check it
+        if: ${{ !cancelled() }}
+        run: |
+          sudo modprobe wireguard
+          python3 week1/lab.py --lab w1-wg --out "results/C-run$RUN.json" --evidence "evidence/C-run$RUN"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: lab-run-${{ matrix.run }}
+          path: |
+            results/
+            evidence/
+          retention-days: 90
+
+  batfish:
+    name: test B (Batfish)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Start Batfish, pinned by digest
+        run: docker run -d --name batfish -p 9996:9996 "$BATFISH_IMAGE"
+      - name: Install pybatfish
+        run: |
+          python3 -m venv "$RUNNER_TEMP/bf"
+          "$RUNNER_TEMP/bf/bin/pip" install -q "pybatfish==$PYBATFISH_VERSION"
+      - name: Render the baseline, the planted error and the tunnel snapshot
+        run: |
+          python3 week1/render.py --lab w1-bgp --out build/w1-bgp
+          python3 week1/render.py --lab w1-bgp --fault W1-F --out build/w1-bgp-W1-F
+          python3 week1/render.py --lab w1-wg --out build/w1-wg
+      - name: Test B, ask Batfish
+        run: >-
+          "$RUNNER_TEMP/bf/bin/python" week1/batfish_check.py
+          --baseline build/w1-bgp/batfish --fault build/w1-bgp-W1-F/batfish
+          --wg build/w1-wg/batfish --out results/B.json
+      - name: For the record, FRR's own syntax check (not part of the verdict)
+        if: ${{ !cancelled() }}
+        run: |
+          docker build -q -t packetproof/router:w1 images/router
+          for f in build/w1-bgp/configs/*/frr.conf build/w1-wg/configs/*/frr.conf; do
+            echo "== $f"
+            docker run --rm -v "$PWD/$f:/tmp/frr.conf:ro" --entrypoint vtysh packetproof/router:w1 --dryrun -f /tmp/frr.conf 2>&1 && echo "exit 0" || echo "exit $?"
+          done | tee results/B-vtysh-dryrun.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: batfish
+          path: |
+            results/
+            build/w1-bgp/batfish/
+            build/w1-bgp-W1-F/batfish/
+            build/w1-wg/batfish/
+          retention-days: 90
+
+  budget:
+    name: test D (time budget)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Start the clock
+        run: date +%s.%N > "$RUNNER_TEMP/t0"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-lab
+      - name: Start Batfish and install pybatfish
+        run: |
+          docker run -d --name batfish -p 9996:9996 "$BATFISH_IMAGE"
+          python3 -m venv "$RUNNER_TEMP/bf"
+          "$RUNNER_TEMP/bf/bin/pip" install -q "pybatfish==$PYBATFISH_VERSION"
+      - name: Static stage, render and ask Batfish test B's questions
+        run: |
+          python3 week1/render.py --lab w1-bgp --out build/w1-bgp
+          python3 week1/render.py --lab w1-bgp --fault W1-F --out build/w1-bgp-W1-F
+          set +e
+          "$RUNNER_TEMP/bf/bin/python" week1/batfish_check.py --baseline build/w1-bgp/batfish \
+            --fault build/w1-bgp-W1-F/batfish --out results/D-full-batfish.json
+          echo "batfish exit $?"
+      - name: Live stage, deploy w1-wg and run test C's checks
+        run: |
+          sudo modprobe wireguard
+          set +e
+          python3 week1/lab.py --lab w1-wg --out results/D-full-lab.json
+          echo "lab exit $?"
+      - name: Stop the clock for the full run
+        run: date +%s.%N > "$RUNNER_TEMP/t1"
+      - name: One planted fault (W1-F), warm, timed
+        run: |
+          date +%s.%N > "$RUNNER_TEMP/f0"
+          set +e
+          python3 week1/render.py --lab w1-bgp --fault W1-F --out build/cycle/w1-bgp-W1-F
+          "$RUNNER_TEMP/bf/bin/python" week1/batfish_check.py --routes-only \
+            --fault build/cycle/w1-bgp-W1-F/batfish --out results/D-fault-batfish.json
+          python3 week1/lab.py --lab w1-bgp --fault W1-F --build build/cycle --out results/D-fault-lab.json
+          date +%s.%N > "$RUNNER_TEMP/f1"
+      - name: Write the time-budget result
+        run: >-
+          python3 week1/budget.py --t0 "$RUNNER_TEMP/t0" --t1 "$RUNNER_TEMP/t1"
+          --fault-start "$RUNNER_TEMP/f0" --fault-end "$RUNNER_TEMP/f1" --results results
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: budget
+          path: results/
+          retention-days: 90
+
+  verdict:
+    name: verdict
+    needs: [lab, batfish, budget]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+      - name: Apply the GO rules from docs/method.md
+        run: |
+          mkdir -p results
+          find artifacts -name '*.json' -exec cp {} results/ \;
+          python3 week1/verdict.py results | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: verdict
+          path: results/
+          retention-days: 90
