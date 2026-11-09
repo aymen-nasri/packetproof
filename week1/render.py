@@ -24,6 +24,8 @@ from pathlib import Path
 FRR_VERSION = "10.7.1"
 ROUTER_IMAGE = "packetproof/router:w1"
 HOST_IMAGE = "alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf"
+MGMT_NETWORK = "pp-mgmt"
+MGMT_SUBNET = "192.168.254.0/24"
 
 # The two week-1 topologies, exactly as docs/method.md part 1 describes them.
 LABS: dict[str, dict] = {
@@ -251,7 +253,11 @@ ip link set wg0 mtu 1420 up
 
 def clab_topology(lab_name: str, lab: dict) -> str:
     """containerlab topology. Written as YAML by hand so the file reads cleanly in review."""
-    out = [f"# Rendered by week1/render.py. Do not edit by hand.", f"name: {lab_name}", "topology:", "  nodes:"]
+    out = ["# Rendered by week1/render.py. Do not edit by hand.", f"name: {lab_name}",
+           # containerlab's out-of-band management network stays outside 172.16.0.0/12, so it can
+           # never be mistaken for a lab prefix (docs/method.md, amendment A1).
+           "mgmt:", f"  network: {MGMT_NETWORK}", f"  ipv4-subnet: {MGMT_SUBNET}",
+           "topology:", "  nodes:"]
     for name, r in lab["routers"].items():
         out += [f"    {name}:", "      kind: linux", f"      image: {ROUTER_IMAGE}",
                 "      sysctls:", "        net.ipv4.ip_forward: 1", "      binds:",

@@ -273,4 +273,19 @@ attack path with its verdict and its legitimate pair. It states what each gate c
 
 ## Amendments
 
-None yet.
+### A1 (2026-11-09, after CI run 42703883921): containerlab's management network moves out of 172.16.0.0/12
+
+**What happened.** In the first CI run, test A's check (3) ("isp has exactly 172.16.10.0/24 and
+172.24.10.0/24 from inside 172.16.0.0/12, nothing else") failed in all 5 runs, while every other
+check of test A passed. The extra routes were 172.20.20.0/24 and isp's own /32 on it: containerlab's
+management network, connected to every node on eth0. That network is containerlab's out-of-band
+access, not part of the lab, and the shared setup above already treated it as outside the address
+plan. But it lies inside 172.16.0.0/12, and neither this file nor the check excluded it.
+
+**Change.** The rendered topologies put containerlab's management network on 192.168.254.0/24,
+outside 172.16.0.0/12. Check (3) and every other rule stay word for word as written. The first run
+stays on record as NO-GO for test A under the original setup.
+
+**Why this and not a narrower check.** Counting only BGP-learned routes would also have passed, but
+it would have weakened the check: it would stop seeing a private prefix that reaches isp by any
+other means. Moving the management network keeps the check strict.
