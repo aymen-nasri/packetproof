@@ -167,6 +167,7 @@ def main() -> int:
     ap.add_argument("--batfish-host", default="localhost")
     ap.add_argument("--no-batfish", action="store_true")
     a = ap.parse_args()
+    a.render = a.render.resolve()  # docker -v needs absolute paths
 
     checks = [check_intent(a.conftest, a.render), check_firewalls(a.conftest, a.render), check_vtysh(a.render)]
     if not a.no_batfish:

@@ -59,6 +59,7 @@ def main() -> int:
     ap.add_argument("--new", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
+    a.base, a.new = a.base.resolve(), a.new.resolve()
     parts = [MARKER, "## What this change does to the network", ""]
     if not (a.base / "routers").exists():
         parts.append("The base branch has no rendered network yet, so there is nothing to compare against.")
