@@ -1,0 +1,36 @@
+# Which checks "relate to" each fault layer (docs/method.md, part 6): a catch counts as related
+# only if at least one failing check is listed here for the fault's layer; otherwise it is
+# reported as incidental. Written and committed before the first Gate 3 run.
+#
+# gate1: Gate 1 check names (scripts/gate1.py), optionally narrowed to messages starting with
+#        an invariant ID, e.g. "conftest-intent:INV-06".
+# gate2: Gate 2 test modules (tests/live), optionally narrowed to a test name prefix,
+#        e.g. "test_routing::test_wireguard".
+BGP:
+  gate1: [batfish, vtysh-dryrun, "conftest-intent:INV-06", "conftest-intent:INV-07"]
+  gate2: [test_routing, test_nat::test_lan_b, test_dns::test_inside_view_from_lan_b]
+Routing:
+  gate1: [batfish, "conftest-intent:INV-07"]
+  gate2: [test_routing]
+WireGuard:
+  gate1: []
+  gate2: [test_routing, test_mtu::test_large_download_across_tunnel, test_dns::test_inside_view_from_lan_b]
+MTU:
+  gate1: ["firewall-rendered:INV-09"]
+  gate2: [test_mtu]
+Firewall:
+  gate1: ["conftest-intent:INV-01", "conftest-intent:INV-02", "conftest-intent:INV-04", "conftest-intent:INV-12",
+          firewall-rendered]
+  gate2: [test_matrix, test_attacks, test_nat::test_edge]
+NAT:
+  gate1: ["conftest-intent:INV-01", "conftest-intent:INV-03", "conftest-intent:INV-04", "conftest-intent:INV-12"]
+  gate2: [test_nat, test_matrix, test_attacks::test_ap07, test_attacks::test_ap09]
+DNS:
+  gate1: ["conftest-intent:INV-05", "conftest-intent:INV-11"]
+  gate2: [test_dns, test_attacks::test_ap10, test_attacks::test_ap11]
+TLS:
+  gate1: ["conftest-intent:INV-10"]
+  gate2: [test_tls, test_monitoring]
+Proxy:
+  gate1: ["conftest-intent:INV-12"]
+  gate2: [test_proxy, test_tls::test_https, test_matrix]

@@ -1,0 +1,2 @@
+# Gate 1 only: the Batfish client (it pulls in pandas).
+pybatfish==2026.9.17.3748
