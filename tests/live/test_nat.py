@@ -32,7 +32,7 @@ def test_only_published_ports_answer_from_outside(lab):
 def test_edge_drops_spoofed_private_sources(lab):
     before = lab.nft_counter("rtr-a", "netdev edge uplink_in")
     lab.capture("haproxy", "edge", f"src host {APP1} and src port 31337", 8)
-    lab.sh("outside", f"pp-probe.py spoof {APP1} {PUBLIC} 443 --sport 31337 --count 3")
+    lab.spoof_from("outside", APP1, PUBLIC, 443)
     time.sleep(7)
     seen = lab.captured("haproxy", "edge")
     after = lab.nft_counter("rtr-a", "netdev edge uplink_in")

@@ -32,6 +32,90 @@ jobs:
       - name: Unit tests
         run: '"$RUNNER_TEMP/venv/bin/python" -m pytest -q -p no:cacheprovider tests/unit'
 
+  gate1:
+    name: Gate 1 (static)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      PP_RENDER: build/lab
+      BATFISH_IMAGE: batfish/allinone@sha256:54cb0ed94fd9a3c1ca0985f73e5be479e955cee9b9f6a6799b66be3364fd8e5c
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Start Batfish, pinned by digest
+        run: docker run -d --name batfish -p 9996:9996 "$BATFISH_IMAGE"
+      - name: Build the router image
+        run: docker build -q -t packetproof/router:dev images/router
+      - name: Install Conftest 0.71.1, checking its checksum
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/conftest.tgz" https://github.com/open-policy-agent/conftest/releases/download/v0.71.1/conftest_0.71.1_Linux_x86_64.tar.gz
+          echo "c3f6b2a753bd56e377a1e51a95ae3e057f926f2e9139f7d5b5dfbbaf810f7985  $RUNNER_TEMP/conftest.tgz" | sha256sum -c
+          tar xzf "$RUNNER_TEMP/conftest.tgz" -C "$RUNNER_TEMP" conftest
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt -r requirements-batfish.txt
+      - name: Render the network (schema checked here)
+        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof render --out "$PP_RENDER"'
+      - name: Gate 1 checks
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" scripts/gate1.py --render "$PP_RENDER"
+          --out results/gate1.json --conftest "$RUNNER_TEMP/conftest"
+      - name: Summarise
+        if: ${{ !cancelled() }}
+        run: cat results/gate1.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Render the base branch, for the plan
+        if: ${{ !cancelled() }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git worktree add -q "$RUNNER_TEMP/base" "$BASE_SHA" || exit 0
+          if [ -d "$RUNNER_TEMP/base/packetproof" ]; then
+            (cd "$RUNNER_TEMP/base" && "$RUNNER_TEMP/venv/bin/python" -m packetproof render --out "$RUNNER_TEMP/base-render") || true
+          fi
+      - name: Plan the change (frr-reload.py --test against the base)
+        if: ${{ !cancelled() }}
+        run: |
+          python3 scripts/config_diff.py --base "$RUNNER_TEMP/base-render" --new "$PP_RENDER" --out results/plan.md
+          cat results/plan.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: gate1
+          path: results/
+          retention-days: 30
+
+  plan-comment:
+    name: post the plan on the pull request
+    needs: gate1
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: gate1
+          path: gate1
+      - name: Post the plan, or update the earlier one
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.body | startswith("<!-- packetproof-config-diff -->")) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@gate1/plan.md > /dev/null
+          else
+            gh pr comment "$PR" -R "$REPO" -F gate1/plan.md
+          fi
+
   gate2:
     name: Gate 2 (live copy)
     runs-on: ubuntu-latest

@@ -1,8 +1,8 @@
 """Deploy, wait for, collect evidence from, and destroy a rendered lab.
 
 Runs on any Linux host with Docker, containerlab and sudo (CI uses ubuntu-latest). WireGuard
-keys are generated per deploy with the router image's own `wg`, kept 0600 and owned by root,
-and never printed.
+private keys are generated inside each router at start-up and never leave it; only public keys
+are read and exchanged.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 from .model import Network
-from .render_lab import LAB_NAME, ROUTER_IMAGE, bridge_name
+from .render_lab import LAB_NAME, bridge_name
 
 READY_TIMEOUT_S = 240
 
@@ -35,26 +35,24 @@ def load(render_dir: Path) -> Network:
     return Network(json.loads((render_dir / "intent.json").read_text()))
 
 
-def make_keys(render_dir: Path, net: Network) -> None:
-    pub = {}
-    priv = {}
+def exchange_keys(render_dir: Path, net: Network, timeout_s: int = 90) -> dict:
+    """Each router generated its own private key at start-up. Read only the public keys and
+    give each router its peer's (or the intent's override, which is how fault F09 is planted)."""
+    pub: dict[str, str] = {}
+    start = time.monotonic()
     for s in net.data["sites"]:
         r = s["router"]
-        priv[r] = run(["docker", "run", "--rm", "--entrypoint", "wg", ROUTER_IMAGE, "genkey"]).stdout.strip()
-        pub[r] = run(["docker", "run", "--rm", "-i", "--entrypoint", "wg", ROUTER_IMAGE, "pubkey"],
-                     input=priv[r] + "\n").stdout.strip()
+        while dexec(r, "test", "-f", "/tmp/pp-up-done").returncode != 0:
+            if time.monotonic() - start > timeout_s:
+                return {"keys_exchanged": False, "waiting_for": r}
+            time.sleep(1)
+        pub[r] = dexec(r, "wg", "show", "wg0", "public-key").stdout.strip()
     for s in net.data["sites"]:
         r = s["router"]
-        peer = net.other_site(s["name"])["router"]
-        d = render_dir / "keys" / r
-        d.mkdir(parents=True, exist_ok=True)
-        key = d / "private.key"
-        key.write_text(priv[r] + "\n")
-        os.chmod(key, 0o600)
-        # Root inside the container must own the key (docs/go-no-go.md, test C).
-        run(["sudo", "chown", "0:0", str(key)])
         override = render_dir / "routers" / r / "peer.pub.override"
-        (d / "peer.pub").write_text(override.read_text() if override.exists() else pub[peer] + "\n")
+        peer_key = override.read_text().strip() if override.exists() else pub[net.other_site(s["name"])["router"]]
+        dexec(r, "sh", "/pp/wg-peer.sh", peer_key)
+    return {"keys_exchanged": True}
 
 
 def deploy(render_dir: Path) -> dict:
@@ -69,7 +67,6 @@ def deploy(render_dir: Path) -> dict:
         if run(["ip", "link", "show", br], check=False).returncode != 0:
             run(["sudo", "ip", "link", "add", br, "type", "bridge"])
         run(["sudo", "ip", "link", "set", br, "up"])
-    make_keys(render_dir, net)
     os.chmod(render_dir / "shared", 0o777)
     t0 = time.monotonic()
     dep = run(["sudo", "containerlab", "deploy", "-t", str(render_dir / "topo.clab.yml"), "--reconfigure"],
@@ -77,6 +74,7 @@ def deploy(render_dir: Path) -> dict:
     (render_dir / "deploy.log").write_text(dep.stdout + dep.stderr)
     result = {"deploy_rc": dep.returncode, "deploy_s": round(time.monotonic() - t0, 1)}
     if dep.returncode == 0:
+        result.update(exchange_keys(render_dir, net))
         result.update(wait_ready(net))
     result["total_s"] = round(time.monotonic() - t0, 1)
     (render_dir / "deploy.json").write_text(json.dumps(result, indent=2) + "\n")

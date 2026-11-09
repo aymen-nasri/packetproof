@@ -42,15 +42,39 @@ class Lab:
                               capture_output=True, text=True, timeout=timeout)
 
     # ---- probes ------------------------------------------------------------------------------
+    # Every probe must prove it ran: an empty or unknown answer raises, so a broken probe can
+    # never make an attack look blocked.
+    PROBE_RESULTS = {"open", "refused", "filtered", "unreachable"}
+
+    def _probe(self, res: subprocess.CompletedProcess, what: str) -> str:
+        out = res.stdout.strip()
+        if out not in self.PROBE_RESULTS:
+            raise RuntimeError(f"probe {what} did not run: {out!r} {res.stderr.strip()[-300:]!r}")
+        return out
+
     def tcp(self, src: str, ip: str, port: int, timeout: float = 3) -> str:
-        return self.sh(src, f"pp-probe.py tcp {ip} {port} --timeout {timeout}").stdout.strip()
+        return self._probe(self.sh(src, f"pp-probe.py tcp {ip} {port} --timeout {timeout}"), f"{src}->{ip}:{port}")
 
     def tcp_from_dmz(self, ip: str, port: int, timeout: float = 3) -> str:
-        return self.dmz(f"pp-probe.py tcp {ip} {port} --timeout {timeout}").stdout.strip()
+        return self._probe(self.dmz(f"pp-probe.py tcp {ip} {port} --timeout {timeout}"), f"dmz->{ip}:{port}")
+
+    def nmap_from_dmz(self, target: str) -> str:
+        res = self.dmz(f"nmap -Pn -sT -n -T4 --max-retries 1 --host-timeout 60s --top-ports 100 {target}", timeout=180)
+        if "Nmap done" not in res.stdout:
+            raise RuntimeError(f"nmap from the DMZ did not run: {res.stdout[-300:]!r} {res.stderr[-300:]!r}")
+        return res.stdout
+
+    def spoof_from(self, where: str, src: str, dst: str, port: int) -> None:
+        cmd = f"pp-probe.py spoof {src} {dst} {port} --sport 31337 --count 3"
+        res = self.dmz(cmd) if where == "dmz" else self.sh(where, cmd)
+        if res.stdout.strip() != "sent":
+            raise RuntimeError(f"spoofing probe did not run: {res.stdout!r} {res.stderr[-300:]!r}")
 
     def dig(self, src: str, server: str, name: str, via_dmz: bool = False) -> tuple[str, list[str]]:
         cmd = f"dig @{server} {name} A +time=2 +tries=1"
         out = (self.dmz(cmd) if via_dmz else self.sh(src, cmd)).stdout
+        if "status:" not in out and "timed out" not in out:
+            raise RuntimeError(f"dig did not run: {out[-300:]!r}")
         m = re.search(r"status: (\w+)", out)
         answers = re.findall(rf"^{re.escape(name)}\.\s+\d+\s+IN\s+A\s+(\S+)", out, re.M)
         return (m.group(1) if m else "NO-ANSWER"), answers

@@ -11,3 +11,4 @@ RUN apk add --no-cache \
       dropbear curl bind-tools openssl nmap nmap-nping nmap-ncat tcpdump iputils-ping iproute2 python3
 
 COPY bin/ /usr/local/bin/
+RUN chmod 0755 /usr/local/bin/*.py
