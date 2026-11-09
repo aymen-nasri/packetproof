@@ -50,6 +50,8 @@ def main() -> int:
     if a.render_failed:
         g1_ok, g1_fail = False, ["schema:network.yaml failed schema or reference validation"]
     g2_ok, g2_fail, g2_total = gate2_failures(a.gate2)
+    if a.render_failed:  # nothing could be deployed, so Gate 2 never ran
+        g2_ok, g2_fail, g2_total = None, ["not run: the change did not render"], 0
     deploy = json.loads(a.deploy.read_text()) if a.deploy and a.deploy.exists() else None
     out = {"id": a.id, "gate1": {"passed": g1_ok, "failing": g1_fail},
            "gate2": {"passed": g2_ok, "failing": g2_fail, "tests": g2_total},

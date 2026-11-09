@@ -1,0 +1,155 @@
+name: gate3
+
+# Gate 3 grades the gates. Each of the 30 planted faults (faults/faults.yaml) gets its own runner
+# and goes through Gate 1 and Gate 2, next to an unfaulted baseline in the same run. The scorecard
+# applies docs/method.md part 6: which gate caught what, whether the catch was related to the
+# fault, every escape, and the 12 attack paths. Nightly, and on demand.
+on:
+  schedule:
+    - cron: "41 1 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: gate3
+  cancel-in-progress: false
+
+env:
+  BATFISH_IMAGE: batfish/allinone@sha256:54cb0ed94fd9a3c1ca0985f73e5be479e955cee9b9f6a6799b66be3364fd8e5c
+  PP_RENDER: build/lab
+
+jobs:
+  grade:
+    name: ${{ matrix.case }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        case: [baseline, F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, F11, F12, F13, F14, F15,
+               F16, F17, F18, F19, F20, F21, F22, F23, F24, F25, F26, F27, F28, F29, F30]
+    env:
+      CASE: ${{ matrix.case }}
+    steps:
+      - name: Start the clock
+        run: date +%s > "$RUNNER_TEMP/t0"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Start Batfish, pinned by digest
+        run: docker run -d --name batfish -p 9996:9996 "$BATFISH_IMAGE"
+      - uses: $/.github/actions/setup-lab
+      - name: Install Conftest 0.71.1, checking its checksum
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/conftest.tgz" https://github.com/open-policy-agent/conftest/releases/download/v0.71.1/conftest_0.71.1_Linux_x86_64.tar.gz
+          echo "c3f6b2a753bd56e377a1e51a95ae3e057f926f2e9139f7d5b5dfbbaf810f7985  $RUNNER_TEMP/conftest.tgz" | sha256sum -c
+          tar xzf "$RUNNER_TEMP/conftest.tgz" -C "$RUNNER_TEMP" conftest
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt -r requirements-batfish.txt
+      - name: Render, with the planted fault unless this is the baseline
+        id: render
+        run: |
+          args=()
+          [ "$CASE" != baseline ] && args=(--fault "$CASE")
+          if ! "$RUNNER_TEMP/venv/bin/python" -m packetproof render "${args[@]}" --out "$PP_RENDER"; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Gate 1
+        if: ${{ steps.render.outputs.failed != 'true' }}
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" scripts/gate1.py --render "$PP_RENDER" --out results/gate1.json
+          --conftest "$RUNNER_TEMP/conftest" || true
+      - name: Gate 2, deploy and test
+        if: ${{ steps.render.outputs.failed != 'true' }}
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" -m packetproof deploy --render "$PP_RENDER" || true
+          PP_RENDER="$PP_RENDER" "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -q -p no:cacheprovider \
+            --junitxml results/gate2.xml || true
+      - name: Collect evidence and destroy
+        if: always()
+        run: |
+          if [ -f "$PP_RENDER/intent.json" ]; then
+            "$RUNNER_TEMP/venv/bin/python" -m packetproof evidence --render "$PP_RENDER" --out "evidence/$CASE" || true
+            "$RUNNER_TEMP/venv/bin/python" -m packetproof destroy --render "$PP_RENDER" || true
+          fi
+      - name: Record the verdicts
+        if: ${{ !cancelled() }}
+        env:
+          RENDER_FAILED: ${{ steps.render.outputs.failed }}
+        run: |
+          args=()
+          [ "$RENDER_FAILED" = true ] && args=(--render-failed)
+          python3 gate3/collect.py --id "$CASE" --gate1 results/gate1.json --gate2 results/gate2.xml \
+            --deploy "$PP_RENDER/deploy.json" --seconds "$(( $(date +%s) - $(cat "$RUNNER_TEMP/t0") ))" \
+            "${args[@]}" --out "results/$CASE.json"
+          [ -f results/gate2.xml ] && cp results/gate2.xml "results/$CASE-gate2.xml" || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: gate3-${{ matrix.case }}
+          path: |
+            results/
+            evidence/
+          retention-days: 90
+
+  scorecard:
+    name: scorecard
+    needs: grade
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: gate3-*
+          path: artifacts
+      - name: Grade the gates
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p results
+          find artifacts -path '*/results/*' \( -name 'baseline*' -o -name 'F[0-9][0-9]*' \) -exec cp {} results/ \;
+          python3 -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt
+          "$RUNNER_TEMP/venv/bin/python" gate3/scorecard.py --results results --run-url "$RUN_URL" --out site
+          cp results/*.json site/ 2>/dev/null || true
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          s = json.load(open("site/scorecard.json"))["summary"]
+          print("### Gate 3 scorecard")
+          print("```json"); print(json.dumps(s, indent=2)); print("```")
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scorecard
+          path: site/
+          retention-days: 90
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/
+
+  publish:
+    name: publish the scorecard
+    needs: scorecard
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
