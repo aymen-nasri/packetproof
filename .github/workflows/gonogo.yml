@@ -86,9 +86,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           docker build -q -t packetproof/router:w1 images/router
-          for f in build/w1-bgp/configs/*/frr.conf build/w1-wg/configs/*/frr.conf; do
-            echo "== $f"
-            docker run --rm -v "$PWD/$f:/tmp/frr.conf:ro" --entrypoint vtysh packetproof/router:w1 --dryrun -f /tmp/frr.conf 2>&1 && echo "exit 0" || echo "exit $?"
+          # vtysh -C checks frr.conf in its config directory, so mount each rendered directory there.
+          for d in build/w1-bgp/configs/* build/w1-wg/configs/*; do
+            echo "== $d/frr.conf"
+            docker run --rm -v "$PWD/$d:/tmp/cfg:ro" --entrypoint vtysh packetproof/router:w1               --config_dir /tmp/cfg --dryrun 2>&1 && echo "exit 0" || echo "exit $?"
           done | tee results/B-vtysh-dryrun.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}

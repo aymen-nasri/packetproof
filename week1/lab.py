@@ -168,6 +168,9 @@ def make_keys(build: Path, lab: dict) -> None:
                              input=priv + "\n", capture_output=True, text=True, check=True).stdout.strip()
         (keys / f"{name}.key").write_text(priv + "\n")
         os.chmod(keys / f"{name}.key", 0o600)
+        # Owned by root, still 0600: the setup script runs as root inside the container, and in
+        # run 42706568780 it could not read a 0600 file owned by the runner user (fopen: EACCES).
+        run(["sudo", "chown", "0:0", str(keys / f"{name}.key")])
         (keys / f"{name}.pub").write_text(pub + "\n")
 
 
