@@ -94,7 +94,7 @@ def main() -> int:
         elif not baseline_ok:
             row.update(verdict="void", reason="the baseline failed in this run")
         else:
-            g1, g2 = not r["gate1"]["passed"], not r["gate2"]["passed"]
+            g1, g2 = r["gate1"]["passed"] is False, r["gate2"]["passed"] is False
             row.update(
                 gate1_caught=g1, gate2_caught=g2,
                 gate1_related=g1 and is_related(fault["layer"], "gate1", r["gate1"]["failing"]),

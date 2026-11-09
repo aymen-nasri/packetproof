@@ -134,6 +134,7 @@ def evidence(render_dir: Path, out: Path) -> None:
     # privileged containers (this is what blocked `wg` from reading its key, see the docs).
     host = []
     for cmd in (["sh", "-c", "ls /etc/apparmor.d | grep -iE 'wg|wireguard' || true"],
+                ["sh", "-c", "cat /etc/apparmor.d/wg 2>/dev/null | head -n 40 || true"],
                 ["sh", "-c", "sudo dmesg | grep -i 'apparmor=\"DENIED\"' | tail -n 20 || true"]):
         res = run(cmd, check=False)
         host.append(f"$ {cmd[-1]}\n{res.stdout}{res.stderr}")
