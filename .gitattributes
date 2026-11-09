@@ -1,0 +1,2 @@
+# Configs and scripts run inside Linux containers, so keep LF line endings on every checkout.
+* text=auto eol=lf

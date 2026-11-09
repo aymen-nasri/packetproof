@@ -16,6 +16,10 @@ whether the tools the design depends on (containerlab on a free runner, Batfish 
 configs, WireGuard inside containers, the CI time budget, and local development on Windows 10)
 actually hold. Each result will be recorded with a link to its CI run.
 
+The rules that judge every result are in [docs/method.md](docs/method.md): the week-1 pass rules,
+the hand-written invariants, 30 planted faults and 12 attack paths. That file was committed before
+any test code existed, so results cannot shape the rules that judge them.
+
 ## Security
 
 Every action is pinned to a full commit SHA, the default workflow token is read-only, and every
