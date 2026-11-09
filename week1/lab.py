@@ -171,13 +171,23 @@ def make_keys(build: Path, lab: dict) -> None:
         (keys / f"{name}.pub").write_text(pub + "\n")
 
 
-def save_evidence(lab: str, meta: dict, evidence: Path) -> None:
+def save_evidence(lab: str, meta: dict, evidence: Path, deploy_log: str) -> None:
     evidence.mkdir(parents=True, exist_ok=True)
-    for node in render.LABS[meta["lab"]]["routers"]:
+    (evidence / "deploy.log").write_text(deploy_log)
+    routers = render.LABS[meta["lab"]]["routers"]
+    for node in routers:
         for name, cmd in (("bgp-summary", "show bgp ipv4 unicast summary"), ("routes", "show ip route"),
                           ("running-config", "show running-config")):
             res = dexec(lab, node, "vtysh", "-c", cmd)
             (evidence / f"{node}.{name}.txt").write_text(res.stdout + res.stderr)
+        if "wg" in routers[node]:
+            # `wg show` prints public keys only; the private key is shown as "(hidden)".
+            parts = []
+            for cmd in (["ip", "-d", "link", "show", "wg0"], ["wg", "show", "wg0"], ["ls", "-ln", "/etc/wireguard"],
+                        ["id"]):
+                res = dexec(lab, node, *cmd)
+                parts.append(f"$ {' '.join(cmd)}\n{res.stdout}{res.stderr}rc={res.returncode}\n")
+            (evidence / f"{node}.wireguard.txt").write_text("\n".join(parts))
 
 
 def main() -> int:
@@ -211,7 +221,7 @@ def main() -> int:
             result["checks"] = run_checks(args.lab, meta["expect"])
         result["timings_s"]["deploy_plus_checks"] = round(time.monotonic() - t0, 1)
         if args.evidence and dep.returncode == 0:
-            save_evidence(args.lab, meta, args.evidence)
+            save_evidence(args.lab, meta, args.evidence, dep.stdout + dep.stderr)
     finally:
         t1 = time.monotonic()
         run(["sudo", "containerlab", "destroy", "-t", topo, "--cleanup"], check=False, timeout=300)

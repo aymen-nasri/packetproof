@@ -172,6 +172,7 @@ jobs:
           path: artifacts
       - name: Apply the GO rules from docs/method.md
         run: |
+          set -o pipefail
           mkdir -p results
           find artifacts -name '*.json' -exec cp {} results/ \;
           python3 week1/verdict.py results | tee -a "$GITHUB_STEP_SUMMARY"
