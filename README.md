@@ -11,10 +11,17 @@ will be graded against deliberately broken changes and attack paths.
 
 ## Status
 
-**Week 1: go/no-go checks. None of the network described above is built yet.** This week tests
-whether the tools the design depends on (containerlab on a free runner, Batfish reading FRR
-configs, WireGuard inside containers, the CI time budget, and local development on Windows 10)
-actually hold. Each result will be recorded with a link to its CI run.
+**Week 1 is done: the go/no-go checks. The network described above is not built yet.** Week 1
+tested whether the tools the design depends on actually hold. Results, each linked to its CI run,
+are in [docs/go-no-go.md](docs/go-no-go.md):
+
+| Assumption | Verdict |
+|---|---|
+| containerlab runs on a free runner | GO: 5 of 5 runs, about 22 s to deploy and check |
+| Batfish reads the generated FRR configs | GO, and it caught a planted prefix-list leak; it cannot see whether the WireGuard tunnel is up |
+| WireGuard works inside containers | GO: 5 of 5 runs, BGP over the tunnel, capture shows no clear traffic |
+| The CI time budget holds | GO: one full run 87 s, one planted fault 23 s (single measurements) |
+| The Windows 10 laptop can run the lab | NO-GO (not attempted): development happens in CI |
 
 The rules that judge every result are in [docs/method.md](docs/method.md): the week-1 pass rules,
 the hand-written invariants, 30 planted faults and 12 attack paths. That file was committed before
