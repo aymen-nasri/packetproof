@@ -1,0 +1,262 @@
+# The 30 planted faults of docs/method.md, part 4, as machine-applicable changes.
+# The method fixed what each fault is, where it is planted and the predicted first gate before
+# any gate existed; this file only says how to apply it. `intent` ops edit network.yaml data;
+# `render` patches edit a rendered file (a broken template or a hand-edited generated file).
+
+- id: F01
+  layer: BGP
+  where: template
+  predicted: gate1
+  title: Prefix-list removed on rtr-a's export to isp, so private prefixes leak to the ISP
+  render:
+    - file: routers/rtr-a/frr.conf
+      find: "route-map RM-ISP-OUT permit 10\n match ip address prefix-list PL-ISP-OUT\n"
+      replace: "route-map RM-ISP-OUT permit 10\n"
+
+- id: F02
+  layer: BGP
+  where: intent
+  predicted: gate1
+  title: Wrong remote AS for the tunnel peer on rtr-b (65003 instead of 65001)
+  intent:
+    - {op: set, path: [sites, {name: b}, bgp, tunnel, remote_asn], value: 65003}
+
+- id: F03
+  layer: BGP
+  where: intent
+  predicted: gate1
+  title: Typo in rtr-b's export prefix-list (172.24.10.0/25 instead of /24), so LAN-B vanishes from site A
+  intent:
+    - {op: set, path: [sites, {name: b}, bgp, tunnel, advertise], value: [172.24.10.0/25, 172.24.255.1/32]}
+
+- id: F04
+  layer: BGP
+  where: intent
+  predicted: gate2
+  title: rtr-b advertises its own uplink /31 over the tunnel (recursive routing)
+  intent:
+    - {op: append, path: [sites, {name: b}, bgp, tunnel, advertise], value: 203.0.113.0/31}
+
+- id: F05
+  layer: Routing
+  where: intent
+  predicted: gate2
+  title: Static route on rtr-b for 172.16.0.0/16 via isp beats BGP, so site-to-site traffic leaves in clear
+  intent:
+    - {op: set, path: [sites, {name: b}, static_routes], value: [{prefix: 172.16.0.0/16, via: 203.0.113.0}]}
+
+- id: F06
+  layer: BGP
+  where: template
+  predicted: gate1
+  title: Inbound route-map removed for the tunnel peer on rtr-a (session up, zero prefixes accepted)
+  render:
+    - file: routers/rtr-a/frr.conf
+      find: "  neighbor 172.31.255.1 route-map RM-TUNNEL-IN in\n"
+      replace: ""
+
+- id: F07
+  layer: BGP
+  where: intent
+  predicted: gate2
+  title: rtr-a sends a default route to rtr-b, so site B's internet traffic would hairpin through site A
+  intent:
+    - {op: set, path: [sites, {name: a}, bgp, tunnel, default_originate], value: true}
+
+- id: F08
+  layer: WireGuard
+  where: intent
+  predicted: gate2
+  title: AllowedIPs on rtr-a lists only the tunnel address, not site B (BGP up, data dropped)
+  intent:
+    - {op: set, path: [sites, {name: a}, wireguard, allowed_ips], value: [172.31.255.1/32]}
+
+- id: F09
+  layer: WireGuard
+  where: intent
+  predicted: gate2
+  title: Wrong peer public key on rtr-b (no handshake)
+  intent:
+    - {op: set, path: [sites, {name: b}, wireguard, peer_public_key], value: "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="}
+
+- id: F10
+  layer: WireGuard
+  where: intent
+  predicted: gate2
+  title: Wrong endpoint port on rtr-a (51821, no handshake)
+  intent:
+    - {op: set, path: [sites, {name: a}, wireguard, port], value: 51821}
+
+- id: F11
+  layer: MTU
+  where: template
+  predicted: gate2
+  title: ICMP "fragmentation needed" dropped by rtr-a's forward chain (small pings pass, large transfers hang)
+  render:
+    - file: routers/rtr-a/ruleset.nft
+      find: "type filter hook forward priority filter; policy drop;\n"
+      replace: "type filter hook forward priority filter; policy drop;\n        icmp type destination-unreachable icmp code frag-needed drop comment \"F11\"\n"
+
+- id: F12
+  layer: Firewall
+  where: intent
+  predicted: gate1
+  title: Hole into the DB zone, TCP 5432 accepted from any zone rather than only APP
+  intent:
+    - {op: set, path: [flows, {name: app-to-db}, from], value: [all]}
+
+- id: F13
+  layer: Firewall
+  where: template
+  predicted: gate2
+  title: A broad accept from the DMZ to 172.16.0.0/16 placed above the specific rules (shadowing)
+  render:
+    - file: routers/rtr-a/ruleset.nft
+      find: "type filter hook forward priority filter; policy drop;\n"
+      replace: "type filter hook forward priority filter; policy drop;\n        iifname \"eth3\" ip daddr 172.16.0.0/16 accept comment \"F13\"\n"
+
+- id: F14
+  layer: Firewall
+  where: template
+  predicted: gate1
+  title: Forward-chain default policy changed from drop to accept on rtr-a
+  render:
+    - file: routers/rtr-a/ruleset.nft
+      find: "type filter hook forward priority filter; policy drop;"
+      replace: "type filter hook forward priority filter; policy accept;"
+
+- id: F15
+  layer: Firewall
+  where: template
+  predicted: gate2
+  title: The established/related accept removed from rtr-a's forward chain (replies dropped)
+  render:
+    - file: routers/rtr-a/ruleset.nft
+      find: "type filter hook forward priority filter; policy drop;\n        ct state established,related accept\n"
+      replace: "type filter hook forward priority filter; policy drop;\n"
+
+- id: F16
+  layer: Firewall
+  where: template
+  predicted: gate2
+  title: Anti-spoofing removed from the stateless edge filter on rtr-a
+  render:
+    - file: routers/rtr-a/ruleset.nft
+      find: "        ip saddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 198.51.100.64/27 } counter drop comment \"edge anti-spoof\"\n"
+      replace: ""
+
+- id: F17
+  layer: Firewall
+  where: intent
+  predicted: gate1
+  title: SSH to rtr-a accepted from every zone
+  intent:
+    - {op: append, path: [flows], value: {name: router-ssh, from: [all], to: ["router:rtr-a"], tcp: [22]}}
+
+- id: F18
+  layer: Firewall
+  where: intent
+  predicted: gate1
+  title: DB interface placed in the APP zone, so DB is treated as APP
+  intent:
+    - {op: set, path: [sites, {name: a}, zones, {name: db}, interface_zone], value: app}
+
+- id: F19
+  layer: Firewall
+  where: intent
+  predicted: gate1
+  title: DMZ allowed to start connections to the outside on any port (exfiltration path)
+  intent:
+    - {op: append, path: [flows], value: {name: dmz-out, from: ["zone:dmz"], to: [internet], any_port: true}}
+
+- id: F20
+  layer: NAT
+  where: intent
+  predicted: gate1
+  title: Port-forward exposes an internal port (198.51.100.65 TCP 5432 to db)
+  intent:
+    - {op: append, path: [nat, port_forwards], value: {site: a, public: 198.51.100.65, tcp: [5432], to: db}}
+
+- id: F21
+  layer: NAT
+  where: template
+  predicted: gate2
+  title: Source NAT removed on rtr-a, so LAN-A users lose the internet
+  render:
+    - file: routers/rtr-a/ruleset.nft
+      find: "        oifname \"eth1\" ip saddr { 172.16.10.0/24, 172.16.50.0/24 } snat to 198.51.100.66 comment \"egress NAT\"\n"
+      replace: ""
+
+- id: F22
+  layer: NAT
+  where: intent
+  predicted: gate2
+  title: NAT also applied to traffic into wg0, so site B sees rtr-a's address instead of the real client
+  intent:
+    - {op: set, path: [nat, snat, {site: a}, include_tunnel], value: true}
+
+- id: F23
+  layer: NAT
+  where: intent
+  predicted: gate2
+  title: Port-forward 443 sent to haproxy port 80, so HTTPS from the outside fails
+  intent:
+    - {op: set, path: [nat, port_forwards, {to: haproxy}, to_port], value: 80}
+
+- id: F24
+  layer: DNS
+  where: intent
+  predicted: gate2
+  title: Stale record, the inside view's www points to 172.16.20.99 (an old address)
+  intent:
+    - {op: set, path: [dns, inside, www], value: 172.16.20.99}
+
+- id: F25
+  layer: DNS
+  where: intent
+  predicted: gate1
+  title: Inside name db.packetproof.example added to the outside view
+  intent:
+    - {op: set, path: [dns, outside, db], value: 172.16.40.10}
+
+- id: F26
+  layer: DNS
+  where: intent
+  predicted: gate1
+  title: Resolver access control allows recursion for the DMZ (DNS exfiltration path)
+  intent:
+    - {op: append, path: [dns, recursion_for], value: dmz}
+
+- id: F27
+  layer: DNS
+  where: intent
+  predicted: gate2
+  title: Inside record for ca.packetproof.example removed (ACME works by IP, fails by name)
+  intent:
+    - {op: remove, path: [dns, inside, ca]}
+
+- id: F28
+  layer: TLS
+  where: generated file
+  predicted: gate2
+  title: HAProxy serves an expired certificate
+  render:
+    - file: hosts/haproxy/haproxy.cfg
+      find: "ssl crt /tmp/pp-certs/www.pem"
+      replace: "ssl crt /shared/pki/test/expired.pem"
+
+- id: F29
+  layer: TLS
+  where: intent
+  predicted: gate2
+  title: HAProxy's certificate lacks the www name (wrong SAN)
+  intent:
+    - {op: set, path: [pki, certificates, {host: haproxy}, names], value: [haproxy.packetproof.example]}
+
+- id: F30
+  layer: Proxy
+  where: intent
+  predicted: gate2
+  title: The frontend cannot reach the API, haproxy to APP 8080 dropped by the firewall
+  intent:
+    - {op: remove, path: [flows, {name: proxy-to-app}]}

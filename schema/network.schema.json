@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aymen-nasri/packetproof/schema/network.schema.json",
+  "title": "PacketProof network.yaml",
+  "description": "Structure and types only. What the network is allowed to do is judged separately by the hand-written invariants in policy/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "domain", "isp", "sites", "tunnel", "hosts", "flows", "nat", "dns", "pki", "proxy", "monitoring"],
+  "$defs": {
+    "ipv4": {"type": "string", "pattern": "^(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])){3}$"},
+    "prefix": {"type": "string", "pattern": "^(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])){3}/([0-9]|[12][0-9]|3[0-2])$"},
+    "prefixEntry": {"type": "string", "pattern": "^[0-9./]+( (le|ge) ([0-9]|[12][0-9]|3[0-2]))*$"},
+    "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,14}$"},
+    "label": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,47}$"},
+    "asn": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+    "ports": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 65535}, "minItems": 1, "uniqueItems": true},
+    "endpoint": {"type": "string", "pattern": "^(zone:[a-z][a-z0-9-]*|host:[a-z][a-z0-9-]*|router:[a-z][a-z0-9-]*|internet|all)$"}
+  },
+  "properties": {
+    "version": {"const": 1},
+    "domain": {"type": "string", "pattern": "^[a-z0-9.-]+$"},
+    "isp": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "asn", "router_id", "outside"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "asn": {"$ref": "#/$defs/asn"},
+        "router_id": {"$ref": "#/$defs/ipv4"},
+        "outside": {
+          "type": "object", "additionalProperties": false, "required": ["prefix", "gateway"],
+          "properties": {"prefix": {"$ref": "#/$defs/prefix"}, "gateway": {"$ref": "#/$defs/ipv4"},
+                         "mtu": {"type": "integer", "minimum": 1280, "maximum": 9000}}
+        }
+      }
+    },
+    "sites": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["name", "router", "asn", "router_id", "loopback", "public_prefix", "nat_address", "uplink", "zones", "bgp", "static_routes", "wireguard"],
+        "properties": {
+          "name": {"$ref": "#/$defs/name"},
+          "router": {"$ref": "#/$defs/name"},
+          "asn": {"$ref": "#/$defs/asn"},
+          "router_id": {"$ref": "#/$defs/ipv4"},
+          "loopback": {"$ref": "#/$defs/prefix"},
+          "public_prefix": {"$ref": "#/$defs/prefix"},
+          "nat_address": {"$ref": "#/$defs/ipv4"},
+          "uplink": {
+            "type": "object", "additionalProperties": false, "required": ["address", "isp_address"],
+            "properties": {"address": {"$ref": "#/$defs/prefix"}, "isp_address": {"$ref": "#/$defs/ipv4"}}
+          },
+          "zones": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["name", "prefix", "gateway"],
+              "properties": {"name": {"$ref": "#/$defs/name"}, "prefix": {"$ref": "#/$defs/prefix"},
+                             "gateway": {"$ref": "#/$defs/ipv4"},
+                             "interface_zone": {"$ref": "#/$defs/name"}}
+            }
+          },
+          "bgp": {
+            "type": "object", "additionalProperties": false, "required": ["isp", "tunnel"],
+            "properties": {
+              "isp": {
+                "type": "object", "additionalProperties": false, "required": ["remote_asn", "advertise"],
+                "properties": {"remote_asn": {"$ref": "#/$defs/asn"},
+                               "advertise": {"type": "array", "items": {"$ref": "#/$defs/prefixEntry"}}}
+              },
+              "tunnel": {
+                "type": "object", "additionalProperties": false, "required": ["remote_asn", "advertise", "accept", "default_originate"],
+                "properties": {"remote_asn": {"$ref": "#/$defs/asn"},
+                               "advertise": {"type": "array", "items": {"$ref": "#/$defs/prefixEntry"}},
+                               "accept": {"type": "array", "items": {"$ref": "#/$defs/prefixEntry"}},
+                               "default_originate": {"type": "boolean"}}
+              }
+            }
+          },
+          "static_routes": {
+            "type": "array",
+            "items": {"type": "object", "additionalProperties": false, "required": ["prefix", "via"],
+                      "properties": {"prefix": {"$ref": "#/$defs/prefix"}, "via": {"$ref": "#/$defs/ipv4"}}}
+          },
+          "wireguard": {
+            "type": "object", "additionalProperties": false,
+            "required": ["address", "peer_address", "endpoint", "allowed_ips"],
+            "properties": {"address": {"$ref": "#/$defs/prefix"}, "peer_address": {"$ref": "#/$defs/ipv4"},
+                           "endpoint": {"$ref": "#/$defs/ipv4"},
+                           "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                           "peer_public_key": {"type": "string"},
+                           "allowed_ips": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/prefix"}}}
+          }
+        }
+      }
+    },
+    "tunnel": {
+      "type": "object", "additionalProperties": false, "required": ["prefix", "port", "mtu"],
+      "properties": {"prefix": {"$ref": "#/$defs/prefix"}, "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                     "mtu": {"type": "integer", "minimum": 1280, "maximum": 9000}}
+    },
+    "hosts": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "zone", "address", "role"],
+        "properties": {
+          "name": {"$ref": "#/$defs/name"},
+          "zone": {"$ref": "#/$defs/name"},
+          "address": {"$ref": "#/$defs/ipv4"},
+          "role": {"enum": ["client", "admin", "monitor", "proxy", "dns-authoritative", "app", "db", "dns-resolver", "ca", "outside"]}
+        }
+      }
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "from", "to"],
+        "properties": {
+          "name": {"$ref": "#/$defs/label"},
+          "from": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/endpoint"}},
+          "to": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/endpoint"}},
+          "tcp": {"$ref": "#/$defs/ports"},
+          "udp": {"$ref": "#/$defs/ports"},
+          "any_port": {"type": "boolean"}
+        }
+      }
+    },
+    "nat": {
+      "type": "object", "additionalProperties": false, "required": ["snat", "port_forwards"],
+      "properties": {
+        "snat": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["site", "from", "to"],
+                 "properties": {"site": {"$ref": "#/$defs/name"}, "from": {"type": "array", "items": {"$ref": "#/$defs/name"}},
+                                "to": {"$ref": "#/$defs/ipv4"}, "include_tunnel": {"type": "boolean"}}}},
+        "port_forwards": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["site", "public", "to"],
+                          "properties": {"site": {"$ref": "#/$defs/name"}, "public": {"$ref": "#/$defs/ipv4"},
+                                         "tcp": {"$ref": "#/$defs/ports"}, "udp": {"$ref": "#/$defs/ports"},
+                                         "to": {"$ref": "#/$defs/name"}, "to_port": {"type": "integer", "minimum": 1, "maximum": 65535}}}}
+      }
+    },
+    "dns": {
+      "type": "object", "additionalProperties": false,
+      "required": ["zone", "inside", "outside", "recursion_for", "local_only_for", "forwarders"],
+      "properties": {
+        "zone": {"type": "string"},
+        "inside": {"type": "object", "additionalProperties": {"type": "string"}},
+        "outside": {"type": "object", "additionalProperties": {"type": "string"}},
+        "recursion_for": {"type": "array", "items": {"$ref": "#/$defs/name"}},
+        "local_only_for": {"type": "array", "items": {"$ref": "#/$defs/name"}},
+        "forwarders": {"type": "object", "additionalProperties": {"$ref": "#/$defs/ipv4"}}
+      }
+    },
+    "pki": {
+      "type": "object", "additionalProperties": false, "required": ["ca", "port", "certificates"],
+      "properties": {
+        "ca": {"$ref": "#/$defs/name"},
+        "port": {"type": "integer"},
+        "certificates": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["host", "names"],
+                         "properties": {"host": {"$ref": "#/$defs/name"}, "names": {"type": "array", "minItems": 1, "items": {"type": "string"}}}}}
+      }
+    },
+    "proxy": {
+      "type": "object", "additionalProperties": false, "required": ["host", "listen", "certificate", "backends", "health_check"],
+      "properties": {
+        "host": {"$ref": "#/$defs/name"},
+        "listen": {"type": "integer"},
+        "certificate": {"type": "string"},
+        "backends": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["host", "port"],
+                     "properties": {"host": {"$ref": "#/$defs/name"}, "port": {"type": "integer"}}}},
+        "health_check": {"type": ["object", "null"], "additionalProperties": false,
+                         "properties": {"path": {"type": "string"}, "inter_ms": {"type": "integer"}, "fall": {"type": "integer"}, "rise": {"type": "integer"}}}
+      }
+    },
+    "monitoring": {
+      "type": "object", "additionalProperties": false, "required": ["host", "probes"],
+      "properties": {
+        "host": {"$ref": "#/$defs/name"},
+        "probes": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["name", "kind", "target"],
+                   "properties": {"name": {"type": "string"}, "kind": {"enum": ["http", "tls", "dns"]}, "target": {"type": "string"}, "query": {"type": "string"}}}}
+      }
+    }
+  }
+}
