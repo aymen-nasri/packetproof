@@ -81,6 +81,9 @@ def site_router(net: Network, site: dict) -> str:
     isp_peer = site["uplink"]["isp_address"]
     tun_peer = site["wireguard"]["peer_address"]
     out += [f"router bgp {site['asn']}", f" bgp router-id {site['router_id']}",
+            # RFC 8212: no route in or out of an eBGP session without an explicit policy. FRR's
+            # datacenter profile turns this off by default; Gate 3 (fault F06) showed why it matters.
+            " bgp ebgp-requires-policy",
             f" neighbor {isp_peer} remote-as {site['bgp']['isp']['remote_asn']}",
             f" neighbor {isp_peer} description isp",
             f" neighbor {tun_peer} remote-as {site['bgp']['tunnel']['remote_asn']}",
@@ -119,8 +122,15 @@ def isp_router(net: Network) -> str:
     return "\n".join(out) + "\n"
 
 
+BATFISH_UNSUPPORTED = {" bgp ebgp-requires-policy"}
+
+
 def batfish_file(hostname: str, frr_conf: str, interfaces: list[str]) -> str:
-    """Cumulus concatenated format, exactly as week 1 proved Batfish reads it."""
+    """Cumulus concatenated format, exactly as week 1 proved Batfish reads it. The few lines
+    Batfish's FRR grammar does not know are left out of the snapshot (listed above, and in
+    docs/limits.md), so Batfish reads the running config minus exactly those lines."""
+    frr_conf = "".join(line for line in frr_conf.splitlines(keepends=True)
+                       if line.rstrip("\n") not in BATFISH_UNSUPPORTED)
     lines = [hostname, "# This file describes the network interfaces", "auto lo", "iface lo inet loopback", ""]
     for i in interfaces:
         if i != "lo":

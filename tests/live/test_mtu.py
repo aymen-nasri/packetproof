@@ -39,3 +39,12 @@ def test_large_download_from_outside_through_nat(lab):
     res = lab.curl("outside", f"https://www.{ZONE}/big",
                    f"--resolve www.{ZONE}:443:{PUBLIC} -o /dev/null -w '%{{size_download}}'", timeout=20)
     assert res.stdout.strip() == str(BIG), res.stdout + res.stderr
+
+
+def test_path_mtu_discovery_happened_through_nat(lab):
+    """After the download, haproxy must have learned the 1400-byte path to the outside host from
+    the ISP's ICMP "fragmentation needed", translated back through rtr-a's NAT. Without this the
+    download test could pass without path-MTU discovery ever running (Gate 3, fault F11)."""
+    lab.curl("outside", f"https://www.{ZONE}/big", f"--resolve www.{ZONE}:443:{PUBLIC} -o /dev/null", timeout=20)
+    out = lab.sh("haproxy", "ip route get 192.0.2.10").stdout
+    assert "mtu 1400" in out, out
