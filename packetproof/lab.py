@@ -55,11 +55,15 @@ def exchange_keys(render_dir: Path, net: Network, managed: dict | None = None, t
                  "umask 077; cat > /etc/wireguard/pp-wg.key && wg set wg0 private-key /etc/wireguard/pp-wg.key"],
                 input=managed["wireguard"][r].strip() + "\n")
         pub[r] = dexec(r, "wg", "show", "wg0", "public-key").stdout.strip()
+        if not pub[r]:
+            return {"keys_exchanged": False, "error": f"{r} has no WireGuard public key"}
     for s in net.data["sites"]:
         r = s["router"]
         override = render_dir / "routers" / r / "peer.pub.override"
         peer_key = override.read_text().strip() if override.exists() else pub[net.other_site(s["name"])["router"]]
-        dexec(r, "sh", "/pp/wg-peer.sh", peer_key)
+        res = dexec(r, "sh", "/pp/wg-peer.sh", peer_key)
+        if res.returncode != 0:
+            return {"keys_exchanged": False, "error": f"wg-peer.sh on {r}: {(res.stdout + res.stderr)[-300:]}"}
     return {"keys_exchanged": True, "managed_identities": bool(managed)}
 
 
@@ -69,17 +73,27 @@ def deploy(render_dir: Path, secrets: Path | None = None) -> dict:
     managed = json.loads(secrets.read_text()) if secrets else None
     ca_dir = render_dir / "secrets" / "ca"  # bind-mounted read-only into the CA container
     ca_dir.mkdir(parents=True, exist_ok=True)
+    key = ca_dir / "root_ca.key"
+    try:
+        return _deploy(render_dir, net, managed, ca_dir, key)
+    finally:
+        # Whatever happened, the root key has no reason to stay on the runner.
+        key.unlink(missing_ok=True)
+
+
+def _deploy(render_dir: Path, net: Network, managed: dict | None, ca_dir: Path, key: Path) -> dict:
     if managed and managed.get("ca"):
         # The CA finds its long-lived root here at start-up and signs a fresh intermediate with it.
         (ca_dir / "root_ca.crt").write_text(managed["ca"]["root_cert"])
-        key = ca_dir / "root_ca.key"
-        key.write_text(managed["ca"]["root_key"])
-        os.chmod(key, 0o600)
+        # Created 0600 from the start: never readable by others, even for an instant.
+        fd = os.open(key, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(managed["ca"]["root_key"])
     run(["sudo", "modprobe", "wireguard"])
     run(["sudo", "modprobe", "br_netfilter"], check=False)
     # Bridged lab traffic must not be filtered by the host's (Docker's) iptables FORWARD policy.
-    for key in ("net.bridge.bridge-nf-call-iptables", "net.bridge.bridge-nf-call-ip6tables"):
-        run(["sudo", "sysctl", "-qw", f"{key}=0"], check=False)
+    for sysctl in ("net.bridge.bridge-nf-call-iptables", "net.bridge.bridge-nf-call-ip6tables"):
+        run(["sudo", "sysctl", "-qw", f"{sysctl}=0"], check=False)
     for zone in net.zones:
         br = bridge_name(zone)
         if run(["ip", "link", "show", br], check=False).returncode != 0:
@@ -94,8 +108,11 @@ def deploy(render_dir: Path, secrets: Path | None = None) -> dict:
     if dep.returncode == 0:
         result.update(exchange_keys(render_dir, net, managed))
         result.update(wait_ready(net))
-    # Once the CA is up (or the deploy failed), the root key has no reason to stay on the runner.
-    (ca_dir / "root_ca.key").unlink(missing_ok=True)
+    # Ready: deployed, keys exchanged, every node ready and both sessions up on both site routers.
+    # The command's exit code stays containerlab's (Gate 2 must still run on a faulted lab); prod
+    # checks this flag.
+    result["ready"] = (result["deploy_rc"] == 0 and result.get("keys_exchanged") is True
+                       and not result.get("not_ready") and result.get("bgp_up") is True)
     result["total_s"] = round(time.monotonic() - t0, 1)
     (render_dir / "deploy.json").write_text(json.dumps(result, indent=2) + "\n")
     return result
@@ -110,26 +127,27 @@ def wait_ready(net: Network) -> dict:
     Never raises: what is not ready is reported, and Gate 2's tests say what that broke."""
     start = time.monotonic()
     pending = set(nodes(net))
+    expected = {s["router"]: {s["uplink"]["isp_address"], s["wireguard"]["peer_address"]} for s in net.data["sites"]}
     bgp_ok = False
     while time.monotonic() - start < READY_TIMEOUT_S:
         for n in sorted(pending):
             if dexec(n, "test", "-f", "/tmp/pp-ready").returncode == 0:
                 pending.discard(n)
-        if not bgp_ok:
-            bgp_ok = all(_sessions_up(s["router"]) for s in net.data["sites"])
+        bgp_ok = all(_sessions_up(r, peers) for r, peers in expected.items())
         if not pending and bgp_ok:
             break
         time.sleep(2)
     return {"ready_s": round(time.monotonic() - start, 1), "not_ready": sorted(pending), "bgp_up": bgp_ok}
 
 
-def _sessions_up(router: str) -> bool:
+def _sessions_up(router: str, expected: set[str]) -> bool:
+    """Both of this router's sessions (the ISP and the tunnel peer) are Established, not just any."""
     res = dexec(router, "vtysh", "-c", "show bgp ipv4 unicast summary json")
     try:
         peers = json.loads(res.stdout or "{}").get("peers", {})
     except json.JSONDecodeError:
         return False
-    return bool(peers) and all(p.get("state") == "Established" for p in peers.values())
+    return expected <= set(peers) and all(peers[p].get("state") == "Established" for p in expected)
 
 
 def evidence(render_dir: Path, out: Path) -> None:
