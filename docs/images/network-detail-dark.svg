@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 891" width="960" height="891" role="img" aria-labelledby="t d">
+<title id="t">Addresses, interfaces and routing</title><desc id="d">Every address below is read from network.yaml, the same file the configs are rendered from.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a6e7681" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#6e7681"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="890" rx="14" fill="#0d1117" stroke="#3d444d"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#f0f6fc">Addresses, interfaces and routing</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#9198a1">Every address below is read from network.yaml, the same file the configs are rendered from.</text>
+<rect x="300" y="100" width="360" height="104" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="318" y="126" class="s" font-size="15" fill="#f0f6fc" font-weight="650">isp</text>
+<text x="349.147" y="126" class="s" font-size="12" fill="#9198a1">AS 65000 · transit</text>
+<text x="318" y="150" class="m" font-size="12" fill="#f0f6fc">eth1  198.51.100.0/31 → rtr-a</text>
+<text x="318" y="168" class="m" font-size="12" fill="#f0f6fc">eth2  203.0.113.0/31 → rtr-b</text>
+<text x="318" y="186" class="m" font-size="12" fill="#f0f6fc">eth3  192.0.2.1/24 → outside</text>
+<rect x="690" y="100" width="246" height="70" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="708" y="126" class="s" font-size="15" fill="#f0f6fc" font-weight="650">outside</text>
+<text x="708" y="146" class="m" font-size="12" fill="#f0f6fc">192.0.2.10 · MTU 1400</text>
+<text x="708" y="162" class="s" font-size="11.5" fill="#9198a1">a server on the internet (web, DNS)</text>
+<path d="M660,130 L690,130" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round"/>
+<rect x="24" y="224" width="912" height="54" rx="10" fill="#1c2046" stroke="#8b97f6" stroke-width="1.25" stroke-dasharray="7 5"/>
+<text x="96" y="246" class="s" font-size="12.5" fill="#8b97f6" font-weight="600">WireGuard tunnel 172.31.255.0/31 · UDP 51820 · MTU 1420</text>
+<text x="96" y="265" class="s" font-size="12" fill="#f0f6fc">rtr-a wg0 172.31.255.0 ⟷ rtr-b wg0 172.31.255.1 · eBGP AS 65001 ⟷ AS 65002 over it carries only the private prefixes</text>
+<rect x="24" y="298" width="588" height="557" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="44" y="324" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">SITE A</text>
+<rect x="44" y="334" width="548" height="142" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="60" y="359" class="s" font-size="15" fill="#f0f6fc" font-weight="650">rtr-a</text>
+<text x="100.051" y="359" class="s" font-size="12" fill="#9198a1">AS 65001 · router ID 172.16.255.1</text>
+<text x="60" y="384" class="m" font-size="12" fill="#9198a1">eth1</text>
+<text x="104" y="384" class="m" font-size="12" fill="#f0f6fc">198.51.100.1/31 → isp</text>
+<text x="60" y="403" class="m" font-size="12" fill="#9198a1">wg0</text>
+<text x="104" y="403" class="m" font-size="12" fill="#f0f6fc">172.31.255.0/31 → rtr-b</text>
+<text x="60" y="422" class="m" font-size="12" fill="#9198a1">lo</text>
+<text x="104" y="422" class="m" font-size="12" fill="#f0f6fc">172.16.255.1/32</text>
+<text x="344" y="384" class="m" font-size="12" fill="#9198a1">public</text>
+<text x="410" y="384" class="m" font-size="12" fill="#f0f6fc">198.51.100.64/27</text>
+<text x="344" y="403" class="m" font-size="12" fill="#9198a1">NAT</text>
+<text x="410" y="403" class="m" font-size="12" fill="#f0f6fc">198.51.100.66</text>
+<text x="344" y="422" class="m" font-size="12" fill="#9198a1">publish</text>
+<text x="410" y="422" class="m" font-size="12" fill="#f0f6fc">198.51.100.65</text>
+<text x="344" y="441" class="s" font-size="11.5" fill="#9198a1">tcp 443 → haproxy, tcp/udp 53 → ns1</text>
+<rect x="44" y="488" width="272" height="121" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="45" y="489" width="270" height="30" rx="9" fill="#112d1b"/>
+<rect x="45" y="510" width="270" height="9" fill="#112d1b"/>
+<text x="58" y="509" class="s" font-size="12.5" fill="#3fb950" font-weight="700">LAN-A</text>
+<text x="108.015" y="509" class="m" font-size="12" fill="#f0f6fc">172.16.10.0/24</text>
+<text x="304" y="509" class="m" font-size="11.5" fill="#9198a1" text-anchor="end">eth2</text>
+<text x="58" y="538" class="m" font-size="11.5" fill="#9198a1">gateway 172.16.10.1</text>
+<text x="58" y="558" class="s" font-size="12" fill="#f0f6fc" font-weight="600">client-a</text>
+<text x="132" y="558" class="m" font-size="12" fill="#f0f6fc">172.16.10.10</text>
+<text x="304" y="558" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">client</text>
+<text x="58" y="577" class="s" font-size="12" fill="#f0f6fc" font-weight="600">admin</text>
+<text x="132" y="577" class="m" font-size="12" fill="#f0f6fc">172.16.10.20</text>
+<text x="304" y="577" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">admin host</text>
+<text x="58" y="596" class="s" font-size="12" fill="#f0f6fc" font-weight="600">mon</text>
+<text x="132" y="596" class="m" font-size="12" fill="#f0f6fc">172.16.10.30</text>
+<text x="304" y="596" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">Prometheus</text>
+<rect x="328" y="488" width="272" height="121" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="329" y="489" width="270" height="30" rx="9" fill="#3a2010"/>
+<rect x="329" y="510" width="270" height="9" fill="#3a2010"/>
+<text x="342" y="509" class="s" font-size="12.5" fill="#f0883e" font-weight="700">DMZ</text>
+<text x="380.885" y="509" class="m" font-size="12" fill="#f0f6fc">172.16.20.0/24</text>
+<text x="588" y="509" class="m" font-size="11.5" fill="#9198a1" text-anchor="end">eth3</text>
+<text x="342" y="538" class="m" font-size="11.5" fill="#9198a1">gateway 172.16.20.1</text>
+<text x="342" y="558" class="s" font-size="12" fill="#f0f6fc" font-weight="600">haproxy</text>
+<text x="416" y="558" class="m" font-size="12" fill="#f0f6fc">172.16.20.10</text>
+<text x="588" y="558" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">HAProxy</text>
+<text x="342" y="577" class="s" font-size="12" fill="#f0f6fc" font-weight="600">ns1</text>
+<text x="416" y="577" class="m" font-size="12" fill="#f0f6fc">172.16.20.53</text>
+<text x="588" y="577" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">NSD</text>
+<rect x="44" y="621" width="272" height="102" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="45" y="622" width="270" height="30" rx="9" fill="#0e2a4a"/>
+<rect x="45" y="643" width="270" height="9" fill="#0e2a4a"/>
+<text x="58" y="642" class="s" font-size="12.5" fill="#4493f8" font-weight="700">APP</text>
+<text x="94.6325" y="642" class="m" font-size="12" fill="#f0f6fc">172.16.30.0/24</text>
+<text x="304" y="642" class="m" font-size="11.5" fill="#9198a1" text-anchor="end">eth4</text>
+<text x="58" y="671" class="m" font-size="11.5" fill="#9198a1">gateway 172.16.30.1</text>
+<text x="58" y="691" class="s" font-size="12" fill="#f0f6fc" font-weight="600">app1</text>
+<text x="132" y="691" class="m" font-size="12" fill="#f0f6fc">172.16.30.11</text>
+<text x="304" y="691" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">HTTP app</text>
+<text x="58" y="710" class="s" font-size="12" fill="#f0f6fc" font-weight="600">app2</text>
+<text x="132" y="710" class="m" font-size="12" fill="#f0f6fc">172.16.30.12</text>
+<text x="304" y="710" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">HTTP app</text>
+<rect x="328" y="621" width="272" height="102" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="329" y="622" width="270" height="30" rx="9" fill="#2a1c45"/>
+<rect x="329" y="643" width="270" height="9" fill="#2a1c45"/>
+<text x="342" y="642" class="s" font-size="12.5" fill="#ab7df8" font-weight="700">DB</text>
+<text x="369.755" y="642" class="m" font-size="12" fill="#f0f6fc">172.16.40.0/24</text>
+<text x="588" y="642" class="m" font-size="11.5" fill="#9198a1" text-anchor="end">eth5</text>
+<text x="342" y="671" class="m" font-size="11.5" fill="#9198a1">gateway 172.16.40.1</text>
+<text x="342" y="691" class="s" font-size="12" fill="#f0f6fc" font-weight="600">db</text>
+<text x="416" y="691" class="m" font-size="12" fill="#f0f6fc">172.16.40.10</text>
+<text x="588" y="691" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">TCP 5432</text>
+<rect x="44" y="735" width="272" height="102" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="45" y="736" width="270" height="30" rx="9" fill="#0b2e2d"/>
+<rect x="45" y="757" width="270" height="9" fill="#0b2e2d"/>
+<text x="58" y="756" class="s" font-size="12.5" fill="#2ec4b6" font-weight="700">SVC</text>
+<text x="94.6325" y="756" class="m" font-size="12" fill="#f0f6fc">172.16.50.0/24</text>
+<text x="304" y="756" class="m" font-size="11.5" fill="#9198a1" text-anchor="end">eth6</text>
+<text x="58" y="785" class="m" font-size="11.5" fill="#9198a1">gateway 172.16.50.1</text>
+<text x="58" y="805" class="s" font-size="12" fill="#f0f6fc" font-weight="600">resolver</text>
+<text x="132" y="805" class="m" font-size="12" fill="#f0f6fc">172.16.50.53</text>
+<text x="304" y="805" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">Unbound</text>
+<text x="58" y="824" class="s" font-size="12" fill="#f0f6fc" font-weight="600">ca</text>
+<text x="132" y="824" class="m" font-size="12" fill="#f0f6fc">172.16.50.10</text>
+<text x="304" y="824" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">step-ca</text>
+<rect x="628" y="298" width="308" height="291" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="648" y="324" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">SITE B</text>
+<rect x="648" y="334" width="268" height="142" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="664" y="359" class="s" font-size="15" fill="#f0f6fc" font-weight="650">rtr-b</text>
+<text x="704.051" y="359" class="s" font-size="12" fill="#9198a1">AS 65002 · router ID 172.24.255.1</text>
+<text x="664" y="384" class="m" font-size="12" fill="#9198a1">eth1</text>
+<text x="730" y="384" class="m" font-size="12" fill="#f0f6fc">203.0.113.1/31 → isp</text>
+<text x="664" y="403" class="m" font-size="12" fill="#9198a1">wg0</text>
+<text x="730" y="403" class="m" font-size="12" fill="#f0f6fc">172.31.255.1/31 → rtr-a</text>
+<text x="664" y="422" class="m" font-size="12" fill="#9198a1">lo</text>
+<text x="730" y="422" class="m" font-size="12" fill="#f0f6fc">172.24.255.1/32</text>
+<text x="664" y="441" class="m" font-size="12" fill="#9198a1">public</text>
+<text x="730" y="441" class="m" font-size="12" fill="#f0f6fc">203.0.113.64/27</text>
+<text x="664" y="460" class="m" font-size="12" fill="#9198a1">NAT</text>
+<text x="730" y="460" class="m" font-size="12" fill="#f0f6fc">203.0.113.66</text>
+<rect x="648" y="488" width="276" height="83" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="649" y="489" width="274" height="30" rx="9" fill="#112d1b"/>
+<rect x="649" y="510" width="274" height="9" fill="#112d1b"/>
+<text x="662" y="509" class="s" font-size="12.5" fill="#3fb950" font-weight="700">LAN-B</text>
+<text x="712.015" y="509" class="m" font-size="12" fill="#f0f6fc">172.24.10.0/24</text>
+<text x="912" y="509" class="m" font-size="11.5" fill="#9198a1" text-anchor="end">eth2</text>
+<text x="662" y="538" class="m" font-size="11.5" fill="#9198a1">gateway 172.24.10.1</text>
+<text x="662" y="558" class="s" font-size="12" fill="#f0f6fc" font-weight="600">client-b</text>
+<text x="736" y="558" class="m" font-size="12" fill="#f0f6fc">172.24.10.10</text>
+<text x="912" y="558" class="s" font-size="11.5" fill="#9198a1" text-anchor="end">client</text>
+<path d="M80,334 L80,150 Q80,140 90,140 L298,140" fill="none" stroke="#6e7681" stroke-width="1.75" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M880,334 L880,186 Q880,176 870,176 L662,176" fill="none" stroke="#6e7681" stroke-width="1.75" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<text x="90" y="134" class="s" font-size="11" fill="#9198a1">eBGP · advertises</text>
+<text x="90" y="148" class="m" font-size="11" fill="#9198a1">198.51.100.64/27 only</text>
+<text x="870" y="196" class="s" font-size="11" fill="#9198a1" text-anchor="end">eBGP · 203.0.113.64/27 only</text>
+<line x1="532" y1="278" x2="532" y2="334" stroke="#8b97f6" stroke-width="1.75" stroke-dasharray="4 4"/>
+<line x1="708" y1="278" x2="708" y2="334" stroke="#8b97f6" stroke-width="1.75" stroke-dasharray="4 4"/>
+<rect x="628" y="607" width="308" height="248" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="648" y="633" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">NOTES</text>
+<text x="650" y="657" class="s" font-size="12" fill="#9198a1">Interfaces eth2 and up face the zones, in the</text>
+<text x="650" y="673.5" class="s" font-size="12" fill="#9198a1">order network.yaml lists them.</text>
+<text x="650" y="698" class="s" font-size="12" fill="#9198a1">Each zone is one Linux bridge. A router is the</text>
+<text x="650" y="714.5" class="s" font-size="12" fill="#9198a1">only device on more than one, so every packet</text>
+<text x="650" y="731" class="s" font-size="12" fill="#9198a1">between zones meets its firewall.</text>
+<text x="650" y="755.5" class="s" font-size="12" fill="#9198a1">Inside addresses are private (RFC 1918); public</text>
+<text x="650" y="772" class="s" font-size="12" fill="#9198a1">ones come from the documentation ranges (RFC</text>
+<text x="650" y="788.5" class="s" font-size="12" fill="#9198a1">5737).</text>
+<text x="936" y="877" class="s" font-size="10.5" fill="#6e7681" text-anchor="end">from network.yaml · drawn by scripts/diagrams.py</text>
+</svg>

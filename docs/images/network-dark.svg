@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 732" width="960" height="732" role="img" aria-labelledby="t d">
+<title id="t">The network at a glance</title><desc id="d">Two sites joined by a WireGuard tunnel over an ISP. Site A runs five zones behind one router; site B is one user network.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a6e7681" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#6e7681"/></marker><marker id="a8b97f6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#8b97f6"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="731" rx="14" fill="#0d1117" stroke="#3d444d"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#f0f6fc">The network at a glance</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#9198a1">Two sites joined by a WireGuard tunnel over an ISP. Site A runs five zones behind one router; site B is one user network.</text>
+<rect x="300" y="100" width="360" height="166" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="320" y="126" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">INTERNET</text>
+<rect x="320" y="138" width="320" height="54" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="321" y="139" width="4" height="52" rx="2" fill="#9198a1"/>
+<text x="338" y="160" class="s" font-size="14.5" fill="#f0f6fc" font-weight="600">ISP router</text>
+<text x="338" y="180.5" class="s" font-size="12" fill="#9198a1">isp · AS 65000 · carries traffic between sites</text>
+<rect x="320" y="202" width="320" height="50" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="321" y="203" width="4" height="48" rx="2" fill="#9198a1"/>
+<text x="338" y="224" class="s" font-size="14.5" fill="#f0f6fc" font-weight="600">Outside host</text>
+<text x="338" y="244.5" class="s" font-size="12" fill="#9198a1">outside · a server on the internet</text>
+<line x1="480" y1="192" x2="480" y2="202" stroke="#6e7681" stroke-width="1.5"/>
+<rect x="24" y="306" width="400" height="388" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="44" y="332" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">SITE A</text>
+<rect x="44" y="342" width="360" height="60" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="45" y="343" width="4" height="58" rx="2" fill="#9198a1"/>
+<text x="62" y="364" class="s" font-size="15" fill="#f0f6fc" font-weight="600">rtr-a</text>
+<text x="62" y="385" class="s" font-size="12" fill="#9198a1">AS 65001 · BGP, zone firewall, NAT, WireGuard</text>
+<rect x="44" y="412" width="360" height="46" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="56" y="424" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="83.4069" y="439.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-A</text>
+<text x="136" y="432" class="s" font-size="13" fill="#f0f6fc" font-weight="600">Users, admin, monitoring</text>
+<text x="136" y="449" class="m" font-size="11.5" fill="#9198a1">client-a · admin · mon</text>
+<rect x="44" y="466" width="360" height="46" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="56" y="478" width="44.5742" height="22" rx="11" fill="#3a2010" stroke="#f0883e" stroke-width="1"/>
+<text x="78.2871" y="493.14" class="s" font-size="11.5" fill="#f0883e" font-weight="600" text-anchor="middle">DMZ</text>
+<text x="136" y="486" class="s" font-size="13" fill="#f0f6fc" font-weight="600">HTTPS proxy, public DNS</text>
+<text x="136" y="503" class="m" font-size="11.5" fill="#9198a1">haproxy · ns1</text>
+<rect x="44" y="520" width="360" height="46" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="56" y="532" width="42.5019" height="22" rx="11" fill="#0e2a4a" stroke="#4493f8" stroke-width="1"/>
+<text x="77.251" y="547.14" class="s" font-size="11.5" fill="#4493f8" font-weight="600" text-anchor="middle">APP</text>
+<text x="136" y="540" class="s" font-size="13" fill="#f0f6fc" font-weight="600">App servers</text>
+<text x="136" y="557" class="m" font-size="11.5" fill="#9198a1">app1 · app2</text>
+<rect x="44" y="574" width="360" height="46" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="56" y="586" width="34.3346" height="22" rx="11" fill="#2a1c45" stroke="#ab7df8" stroke-width="1"/>
+<text x="73.1673" y="601.14" class="s" font-size="11.5" fill="#ab7df8" font-weight="600" text-anchor="middle">DB</text>
+<text x="136" y="594" class="s" font-size="13" fill="#f0f6fc" font-weight="600">Database</text>
+<text x="136" y="611" class="m" font-size="11.5" fill="#9198a1">db</text>
+<rect x="44" y="628" width="360" height="46" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="56" y="640" width="42.5019" height="22" rx="11" fill="#0b2e2d" stroke="#2ec4b6" stroke-width="1"/>
+<text x="77.251" y="655.14" class="s" font-size="11.5" fill="#2ec4b6" font-weight="600" text-anchor="middle">SVC</text>
+<text x="136" y="648" class="s" font-size="13" fill="#f0f6fc" font-weight="600">DNS resolver, certificate authority</text>
+<text x="136" y="665" class="m" font-size="11.5" fill="#9198a1">resolver · ca</text>
+<rect x="536" y="306" width="400" height="172" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="556" y="332" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">SITE B</text>
+<rect x="556" y="342" width="360" height="60" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="557" y="343" width="4" height="58" rx="2" fill="#9198a1"/>
+<text x="574" y="364" class="s" font-size="15" fill="#f0f6fc" font-weight="600">rtr-b</text>
+<text x="574" y="385" class="s" font-size="12" fill="#9198a1">AS 65002 · BGP, zone firewall, NAT, WireGuard</text>
+<rect x="556" y="412" width="360" height="46" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="568" y="424" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="595.407" y="439.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-B</text>
+<text x="648" y="432" class="s" font-size="13" fill="#f0f6fc" font-weight="600">Users</text>
+<text x="648" y="449" class="m" font-size="11.5" fill="#9198a1">client-b</text>
+<path d="M224,342 L224,175 Q224,165 234,165 L318,165" fill="none" stroke="#6e7681" stroke-width="1.75" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<text x="234" y="294" class="s" font-size="11.5" fill="#9198a1">eBGP · public prefixes only</text>
+<path d="M736,342 L736,175 Q736,165 726,165 L642,165" fill="none" stroke="#6e7681" stroke-width="1.75" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<text x="746" y="294" class="s" font-size="11.5" fill="#9198a1">eBGP · public prefixes only</text>
+<path d="M406,372 L554,372" fill="none" stroke="#8b97f6" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="7 5" marker-end="url(#a8b97f6)" marker-start="url(#a8b97f6)"/>
+<text x="480" y="362" class="s" font-size="12" fill="#8b97f6" font-weight="600" text-anchor="middle">WireGuard</text>
+<text x="480" y="392" class="s" font-size="11" fill="#9198a1" text-anchor="middle">private prefixes</text>
+<rect x="536" y="498" width="400" height="196" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="556" y="524" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">HOW TO READ THIS</text>
+<line x1="558" y1="550" x2="598" y2="550" stroke="#6e7681" stroke-width="1.75"/>
+<text x="612" y="554" class="s" font-size="12" fill="#f0f6fc">Physical link: eBGP to the ISP carries only</text>
+<text x="612" y="570" class="s" font-size="12" fill="#9198a1">each site&#x27;s public prefix</text>
+<line x1="558" y1="596" x2="598" y2="596" stroke="#8b97f6" stroke-width="2.5" stroke-dasharray="7 5"/>
+<text x="612" y="600" class="s" font-size="12" fill="#f0f6fc">WireGuard tunnel: eBGP over it carries only</text>
+<text x="612" y="616" class="s" font-size="12" fill="#9198a1">the private prefixes, never in clear</text>
+<text x="558" y="648" class="s" font-size="12" fill="#f0f6fc">Every packet between zones crosses a router and its</text>
+<text x="558" y="664" class="s" font-size="12" fill="#f0f6fc">default-drop zone firewall: nothing shares a segment</text>
+<text x="558" y="680" class="s" font-size="12" fill="#f0f6fc">with another zone.</text>
+<text x="936" y="718" class="s" font-size="10.5" fill="#6e7681" text-anchor="end">from network.yaml · drawn by scripts/diagrams.py</text>
+</svg>

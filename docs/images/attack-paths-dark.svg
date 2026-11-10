@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 650" width="960" height="650" role="img" aria-labelledby="t d">
+<title id="t">Twelve attack paths from a compromised DMZ host</title><desc id="d">Each attack must be blocked while a legitimate flow of the same kind passes in the same test, so a firewall that blocks everything fails.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="af85149" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#f85149"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="649" rx="14" fill="#0d1117" stroke="#3d444d"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#f0f6fc">Twelve attack paths from a compromised DMZ host</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#9198a1">Each attack must be blocked while a legitimate flow of the same kind passes in the same test, so a firewall that blocks everything fails.</text>
+<rect x="24" y="295" width="220" height="150" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="25" y="296" width="4" height="148" rx="2" fill="#f85149"/>
+<text x="42" y="317" class="s" font-size="10.5" fill="#f85149" font-weight="600" letter-spacing="0.06em">ATTACKER</text>
+<text x="42" y="338" class="s" font-size="14.5" fill="#f0f6fc" font-weight="600">A compromised DMZ host</text>
+<text x="42" y="358.5" class="s" font-size="11.5" fill="#9198a1">A throwaway container in haproxy&#x27;s</text>
+<text x="42" y="374.5" class="s" font-size="11.5" fill="#9198a1">network namespace: every packet</text>
+<text x="42" y="390.5" class="s" font-size="11.5" fill="#9198a1">carries haproxy&#x27;s real address,</text>
+<text x="42" y="406.5" class="s" font-size="11.5" fill="#9198a1">172.16.20.10</text>
+<text x="300" y="114" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">ATTACK · MUST BE BLOCKED</text>
+<text x="640" y="114" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">LEGITIMATE TWIN · MUST PASS IN THE SAME TEST</text>
+<rect x="276" y="130" width="660" height="36" rx="8" fill="#151b23"/>
+<path d="M246,370 L256,370 Q262,370 262,364 L262,154 Q262,148 268,148 L282,148" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="148" r="8" fill="#f85149"/>
+<path d="M295,145 L301,151 M301,145 L295,151" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="152" class="m" font-size="11.5" fill="#9198a1">AP-01</text>
+<text x="362" y="152.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">Port scan of the DB zone</text>
+<circle cx="652" cy="148" r="8" fill="#3fb950"/>
+<path d="M648.4,148.2 L651,150.8 L655.8,145.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="152" class="s" font-size="11.5" fill="#f0f6fc">app1 connects to db 5432</text>
+<path d="M246,370 L256,370 Q262,370 262,364 L262,194 Q262,188 268,188 L282,188" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="188" r="8" fill="#f85149"/>
+<path d="M295,185 L301,191 M301,185 L295,191" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="192" class="m" font-size="11.5" fill="#9198a1">AP-02</text>
+<text x="362" y="192.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">Direct database connection</text>
+<circle cx="652" cy="188" r="8" fill="#3fb950"/>
+<path d="M648.4,188.2 L651,190.8 L655.8,185.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="192" class="s" font-size="11.5" fill="#f0f6fc">app2 connects to db 5432</text>
+<rect x="276" y="210" width="660" height="36" rx="8" fill="#151b23"/>
+<path d="M246,370 L256,370 Q262,370 262,364 L262,234 Q262,228 268,228 L282,228" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="228" r="8" fill="#f85149"/>
+<path d="M295,225 L301,231 M301,225 L295,231" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="232" class="m" font-size="11.5" fill="#9198a1">AP-03</text>
+<text x="362" y="232.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">Lateral SSH to the app servers</text>
+<circle cx="652" cy="228" r="8" fill="#3fb950"/>
+<path d="M648.4,228.2 L651,230.8 L655.8,225.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="232" class="s" font-size="11.5" fill="#f0f6fc">admin connects to app1 on 22</text>
+<path d="M246,370 L256,370 Q262,370 262,364 L262,274 Q262,268 268,268 L282,268" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="268" r="8" fill="#f85149"/>
+<path d="M295,265 L301,271 M301,265 L295,271" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="272" class="m" font-size="11.5" fill="#9198a1">AP-04</text>
+<text x="362" y="272.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">Scan of the LAN-A user zone</text>
+<circle cx="652" cy="268" r="8" fill="#3fb950"/>
+<path d="M648.4,268.2 L651,270.8 L655.8,265.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="272" class="s" font-size="11.5" fill="#f0f6fc">client-a gets HTTPS from haproxy</text>
+<rect x="276" y="290" width="660" height="36" rx="8" fill="#151b23"/>
+<path d="M246,370 L256,370 Q262,370 262,364 L262,314 Q262,308 268,308 L282,308" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="308" r="8" fill="#f85149"/>
+<path d="M295,305 L301,311 M301,305 L295,311" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="312" class="m" font-size="11.5" fill="#9198a1">AP-05</text>
+<text x="362" y="312.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">SSH to rtr-a&#x27;s DMZ gateway</text>
+<circle cx="652" cy="308" r="8" fill="#3fb950"/>
+<path d="M648.4,308.2 L651,310.8 L655.8,305.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="312" class="s" font-size="11.5" fill="#f0f6fc">admin reaches rtr-a on 22</text>
+<path d="M246,370 L256,370 Q262,370 262,364 L262,354 Q262,348 268,348 L282,348" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="348" r="8" fill="#f85149"/>
+<path d="M295,345 L301,351 M301,345 L295,351" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="352" class="m" font-size="11.5" fill="#9198a1">AP-06</text>
+<text x="362" y="352.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">SSH to rtr-a&#x27;s other addresses</text>
+<circle cx="652" cy="348" r="8" fill="#3fb950"/>
+<path d="M648.4,348.2 L651,350.8 L655.8,345.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="352" class="s" font-size="11.5" fill="#f0f6fc">admin reaches 172.16.255.1 on 22</text>
+<rect x="276" y="370" width="660" height="36" rx="8" fill="#151b23"/>
+<path d="M246,370 L256,370 Q262,370 262,376 L262,382 Q262,388 268,388 L282,388" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="388" r="8" fill="#f85149"/>
+<path d="M295,385 L301,391 M301,385 L295,391" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="392" class="m" font-size="11.5" fill="#9198a1">AP-07</text>
+<text x="362" y="392.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">SSH to rtr-b across the tunnel</text>
+<circle cx="652" cy="388" r="8" fill="#3fb950"/>
+<path d="M648.4,388.2 L651,390.8 L655.8,385.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="392" class="s" font-size="11.5" fill="#f0f6fc">admin reaches rtr-b on 22 across the tunnel</text>
+<path d="M246,370 L256,370 Q262,370 262,376 L262,422 Q262,428 268,428 L282,428" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="428" r="8" fill="#f85149"/>
+<path d="M295,425 L301,431 M301,425 L295,431" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="432" class="m" font-size="11.5" fill="#9198a1">AP-08</text>
+<text x="362" y="432.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">Scan of LAN-B across the tunnel</text>
+<circle cx="652" cy="428" r="8" fill="#3fb950"/>
+<path d="M648.4,428.2 L651,430.8 L655.8,425.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="425" class="s" font-size="11.5" fill="#f0f6fc">client-b gets HTTPS from haproxy across the</text>
+<text x="668" y="439" class="s" font-size="11.5" fill="#f0f6fc">tunnel</text>
+<rect x="276" y="450" width="660" height="36" rx="8" fill="#151b23"/>
+<path d="M246,370 L256,370 Q262,370 262,376 L262,462 Q262,468 268,468 L282,468" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="468" r="8" fill="#f85149"/>
+<path d="M295,465 L301,471 M301,465 L295,471" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="472" class="m" font-size="11.5" fill="#9198a1">AP-09</text>
+<text x="362" y="472.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">New connections to the outside</text>
+<circle cx="652" cy="468" r="8" fill="#3fb950"/>
+<path d="M648.4,468.2 L651,470.8 L655.8,465.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="472" class="s" font-size="11.5" fill="#f0f6fc">client-a reaches the outside on 443 through NAT</text>
+<path d="M246,370 L256,370 Q262,370 262,376 L262,502 Q262,508 268,508 L282,508" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="508" r="8" fill="#f85149"/>
+<path d="M295,505 L301,511 M301,505 L295,511" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="512" class="m" font-size="11.5" fill="#9198a1">AP-10</text>
+<text x="362" y="512.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">Data hidden in DNS names via the resolver</text>
+<circle cx="652" cy="508" r="8" fill="#3fb950"/>
+<path d="M648.4,508.2 L651,510.8 L655.8,505.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="505" class="s" font-size="11.5" fill="#f0f6fc">client-a resolves a name through the resolver, and</text>
+<text x="668" y="519" class="s" font-size="11.5" fill="#f0f6fc">the outside server logs it</text>
+<rect x="276" y="530" width="660" height="36" rx="8" fill="#151b23"/>
+<path d="M246,370 L256,370 Q262,370 262,376 L262,542 Q262,548 268,548 L282,548" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="548" r="8" fill="#f85149"/>
+<path d="M295,545 L301,551 M301,545 L295,551" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="552" class="m" font-size="11.5" fill="#9198a1">AP-11</text>
+<text x="362" y="552.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">DNS straight to the outside</text>
+<circle cx="652" cy="548" r="8" fill="#3fb950"/>
+<path d="M648.4,548.2 L651,550.8 L655.8,545.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="545" class="s" font-size="11.5" fill="#f0f6fc">the resolver&#x27;s own query to the outside is</text>
+<text x="668" y="559" class="s" font-size="11.5" fill="#f0f6fc">answered</text>
+<path d="M246,370 L256,370 Q262,370 262,376 L262,582 Q262,588 268,588 L282,588" fill="none" stroke="#f85149" stroke-width="1.1" stroke-linejoin="round"/>
+<circle cx="298" cy="588" r="8" fill="#f85149"/>
+<path d="M295,585 L301,591 M301,585 L295,591" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="314" y="592" class="m" font-size="11.5" fill="#9198a1">AP-12</text>
+<text x="362" y="592.5" class="s" font-size="12.5" fill="#f0f6fc" font-weight="600">Spoofed source into the DB</text>
+<circle cx="652" cy="588" r="8" fill="#3fb950"/>
+<path d="M648.4,588.2 L651,590.8 L655.8,585.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="668" y="592" class="s" font-size="11.5" fill="#f0f6fc">real app1 connects to db 5432</text>
+<text x="936" y="636" class="s" font-size="10.5" fill="#6e7681" text-anchor="end">from gate3/scorecard.py · drawn by scripts/diagrams.py</text>
+</svg>

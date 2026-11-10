@@ -5,7 +5,7 @@
   firewall-rendered   each ruleset loaded into a scratch namespace, then policy/rendered
                       against `nft -j list ruleset` (a ruleset that does not load fails here)
   vtysh-dryrun        FRR's own syntax check of every router config, after a self-test
-                      proving the check rejects a broken config (week 1: it can exit 0 unchecked)
+                      proving the check rejects a broken config (the feasibility checks found it can exit 0 unchecked)
   batfish             parse status, BGP session compatibility, and route questions
 
 Usage: python3 scripts/gate1.py --render build/lab --out results/gate1.json [--no-batfish]

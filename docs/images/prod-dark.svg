@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 570" width="960" height="570" role="img" aria-labelledby="t d">
+<title id="t">A production change, step by step</title><desc id="d">There is no always-on host, so prod is rebuilt from the previous bundle and the new one is applied to it in place, as a real change would land.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a6e7681" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#6e7681"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="569" rx="14" fill="#0d1117" stroke="#3d444d"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#f0f6fc">A production change, step by step</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#9198a1">There is no always-on host, so prod is rebuilt from the previous bundle and the new one is applied to it in place, as a real change would land.</text>
+<rect x="41" y="100" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="42" y="101" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="59" y="122" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 1</text>
+<text x="59" y="143" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Verify images</text>
+<text x="59" y="163" class="s" font-size="11.5" fill="#9198a1">cosign signatures checked by</text>
+<text x="59" y="179" class="s" font-size="11.5" fill="#9198a1">digest, before any image is used</text>
+<path d="M243,168 L264,168" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="267" y="100" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="268" y="101" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="285" y="122" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 2</text>
+<text x="285" y="143" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Verify bundles</text>
+<text x="285" y="163" class="s" font-size="11.5" fill="#9198a1">attestation and signature; a</text>
+<text x="285" y="179" class="s" font-size="11.5" fill="#9198a1">tampered copy must be refused,</text>
+<text x="285" y="195" class="s" font-size="11.5" fill="#9198a1">for the right reasons</text>
+<path d="M469,168 L490,168" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="493" y="100" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="494" y="101" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="511" y="122" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 3</text>
+<text x="511" y="143" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Decrypt identities</text>
+<text x="511" y="163" class="s" font-size="11.5" fill="#9198a1">WireGuard keys and the CA root,</text>
+<text x="511" y="179" class="s" font-size="11.5" fill="#9198a1">with SOPS and an age key only</text>
+<text x="511" y="195" class="s" font-size="11.5" fill="#9198a1">the prod environment holds</text>
+<path d="M695,168 L716,168" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="719" y="100" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="720" y="101" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="737" y="122" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 4</text>
+<text x="737" y="143" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Rebuild prod</text>
+<text x="737" y="163" class="s" font-size="11.5" fill="#9198a1">from the previous bundle; wait</text>
+<text x="737" y="179" class="s" font-size="11.5" fill="#9198a1">until ready; check it has no drift</text>
+<rect x="719" y="280" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="720" y="281" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="737" y="302" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 5</text>
+<text x="737" y="323" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Apply in place</text>
+<text x="737" y="343" class="s" font-size="11.5" fill="#9198a1">frr-reload.py and one atomic nft</text>
+<text x="737" y="359" class="s" font-size="11.5" fill="#9198a1">transaction per router, while</text>
+<text x="737" y="375" class="s" font-size="11.5" fill="#9198a1">probes hold TCP connections</text>
+<text x="737" y="391" class="s" font-size="11.5" fill="#9198a1">and ping across the tunnel</text>
+<path d="M717,348 L696,348" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="493" y="280" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="494" y="281" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="511" y="302" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 6</text>
+<text x="511" y="323" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Check drift</text>
+<text x="511" y="343" class="s" font-size="11.5" fill="#9198a1">routers against a fresh FRR</text>
+<text x="511" y="359" class="s" font-size="11.5" fill="#9198a1">from the same file, and the</text>
+<text x="511" y="375" class="s" font-size="11.5" fill="#9198a1">loaded rulesets; then a planted</text>
+<text x="511" y="391" class="s" font-size="11.5" fill="#9198a1">drift must be caught</text>
+<path d="M491,348 L470,348" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="267" y="280" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="268" y="281" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="285" y="302" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 7</text>
+<text x="285" y="323" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Check identities</text>
+<text x="285" y="343" class="s" font-size="11.5" fill="#9198a1">prod really runs the managed</text>
+<text x="285" y="359" class="s" font-size="11.5" fill="#9198a1">keys and the committed CA root</text>
+<path d="M265,348 L244,348" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="41" y="280" width="200" height="136" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="42" y="281" width="4" height="134" rx="2" fill="#3fb950"/>
+<text x="59" y="302" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">STEP 8</text>
+<text x="59" y="323" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Run Gate 2 again</text>
+<text x="59" y="343" class="s" font-size="11.5" fill="#9198a1">the full live suite of the version</text>
+<text x="59" y="359" class="s" font-size="11.5" fill="#9198a1">just applied</text>
+<path d="M819,236 L819,277" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="24" y="442" width="912" height="92" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="44" y="468" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">A RUN IS GREEN ONLY IF</text>
+<rect x="44" y="486" width="173.336" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="57" cy="498" r="6.5" fill="#3fb950"/>
+<path d="M53.4,498.2 L56,500.8 L60.8,495.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="70" y="502.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">every signature verifies</text>
+<rect x="225.336" y="486" width="204.664" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="238.336" cy="498" r="6.5" fill="#3fb950"/>
+<path d="M234.736,498.2 L237.336,500.8 L242.136,495.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="251.336" y="502.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">the tampered copy is refused</text>
+<rect x="438" y="486" width="129.452" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="451" cy="498" r="6.5" fill="#3fb950"/>
+<path d="M447.4,498.2 L450,500.8 L454.8,495.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="464" y="502.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">the lab is ready</text>
+<rect x="575.452" y="486" width="136.4" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="588.452" cy="498" r="6.5" fill="#3fb950"/>
+<path d="M584.852,498.2 L587.452,500.8 L592.252,495.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="601.452" y="502.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">0 failed requests</text>
+<rect x="719.852" y="486" width="161.268" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="732.852" cy="498" r="6.5" fill="#3fb950"/>
+<path d="M729.252,498.2 L731.852,500.8 L736.652,495.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="745.852" y="502.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">0 broken connections</text>
+<rect x="44" y="516" width="83.2518" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="57" cy="528" r="6.5" fill="#3fb950"/>
+<path d="M53.4,528.2 L56,530.8 L60.8,525.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="70" y="532.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">no drift</text>
+<rect x="135.252" y="516" width="132.378" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="148.252" cy="528" r="6.5" fill="#3fb950"/>
+<path d="M144.652,528.2 L147.252,530.8 L152.052,525.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="161.252" y="532.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">identities match</text>
+<rect x="275.629" y="516" width="123.235" height="24" rx="12" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<circle cx="288.629" cy="528" r="6.5" fill="#3fb950"/>
+<path d="M285.029,528.2 L287.629,530.8 L292.429,525.4" fill="none" stroke="#0d1117" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="301.629" y="532.5" class="s" font-size="11.5" fill="#3fb950" font-weight="600">Gate 2 passes</text>
+<text x="936" y="556" class="s" font-size="10.5" fill="#6e7681" text-anchor="end">drawn by scripts/diagrams.py</text>
+</svg>

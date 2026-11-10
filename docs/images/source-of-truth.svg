@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 644" width="960" height="644" role="img" aria-labelledby="t d">
+<title id="t">One file describes the whole network</title><desc id="d">Every config is rendered from network.yaml. The checks that judge it are written separately, by hand.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a818b98" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#818b98"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="643" rx="14" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#1f2328">One file describes the whole network</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#59636e">Every config is rendered from network.yaml. The checks that judge it are written separately, by hand.</text>
+<rect x="24" y="170" width="220" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="25" y="171" width="4" height="148" rx="2" fill="#0969da"/>
+<text x="42" y="192" class="s" font-size="10.5" fill="#0969da" font-weight="600" letter-spacing="0.06em">THE INTENT</text>
+<text x="42" y="213" class="m" font-size="16" fill="#1f2328" font-weight="600">network.yaml</text>
+<text x="42" y="235" class="s" font-size="12" fill="#59636e">2 sites, 6 zones, 12 hosts, 10</text>
+<text x="42" y="251.5" class="s" font-size="12" fill="#59636e">flows, DNS, PKI, proxy and</text>
+<text x="42" y="268" class="s" font-size="12" fill="#59636e">monitoring</text>
+<rect x="284" y="204" width="170" height="82" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="285" y="205" width="4" height="80" rx="2" fill="#59636e"/>
+<text x="302" y="226" class="m" font-size="13" fill="#1f2328" font-weight="600">packetproof</text>
+<text x="302" y="244" class="m" font-size="13" fill="#1f2328" font-weight="600">render</text>
+<text x="302" y="263" class="s" font-size="11.5" fill="#59636e">same input, same bytes</text>
+<path d="M246,245 L281,245" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="494" y="100" width="442" height="66" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="495" y="101" width="4" height="64" rx="2" fill="#0969da"/>
+<text x="512" y="122" class="s" font-size="13.5" fill="#1f2328" font-weight="600">Routers</text>
+<text x="512" y="141.5" class="s" font-size="11.5" fill="#59636e">FRR configs for all three routers; an nftables ruleset and a WireGuard peer for</text>
+<text x="512" y="157.5" class="s" font-size="11.5" fill="#59636e">each site router</text>
+<path d="M456,245 L466,245 Q474,245 474,237 L474,141 Q474,133 482,133 L491,133" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="494" y="176" width="442" height="66" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="495" y="177" width="4" height="64" rx="2" fill="#0b7a75"/>
+<text x="512" y="198" class="s" font-size="13.5" fill="#1f2328" font-weight="600">Services</text>
+<text x="512" y="217.5" class="s" font-size="11.5" fill="#59636e">Unbound, NSD and its zone, HAProxy, step-ca, Prometheus,</text>
+<text x="512" y="233.5" class="s" font-size="11.5" fill="#59636e">blackbox_exporter, Grafana</text>
+<path d="M456,245 L466,245 Q474,245 474,237 L474,217 Q474,209 482,209 L491,209" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="494" y="252" width="442" height="66" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="495" y="253" width="4" height="64" rx="2" fill="#1a7f37"/>
+<text x="512" y="274" class="s" font-size="13.5" fill="#1f2328" font-weight="600">The lab</text>
+<text x="512" y="293.5" class="s" font-size="11.5" fill="#59636e">containerlab topology, one start script per host, readiness checks</text>
+<path d="M456,245 L466,245 Q474,245 474,253 L474,277 Q474,285 482,285 L491,285" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="494" y="328" width="442" height="66" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="495" y="329" width="4" height="64" rx="2" fill="#4c5bd4"/>
+<text x="512" y="350" class="s" font-size="13.5" fill="#1f2328" font-weight="600">Analysis</text>
+<text x="512" y="369.5" class="s" font-size="11.5" fill="#59636e">a Batfish snapshot of the router configs</text>
+<path d="M456,245 L466,245 Q474,245 474,253 L474,353 Q474,361 482,361 L491,361" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="24" y="428" width="912" height="180" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="454" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">WRITTEN BY HAND, NEVER GENERATED, SO A WRONG INTENT CANNOT PASS BOTH</text>
+<rect x="44" y="470" width="280" height="116" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="45" y="471" width="4" height="114" rx="2" fill="#cf222e"/>
+<text x="62" y="492" class="s" font-size="10.5" fill="#cf222e" font-weight="600" letter-spacing="0.06em">CHECKS</text>
+<text x="62" y="513" class="m" font-size="13.5" fill="#1f2328" font-weight="600">policy/intent</text>
+<text x="62" y="532.5" class="s" font-size="11.5" fill="#59636e">13 invariants on network.yaml, such as: nothing</text>
+<text x="62" y="548.5" class="s" font-size="11.5" fill="#59636e">private is advertised to the ISP</text>
+<rect x="340" y="470" width="280" height="116" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="341" y="471" width="4" height="114" rx="2" fill="#cf222e"/>
+<text x="358" y="492" class="s" font-size="10.5" fill="#cf222e" font-weight="600" letter-spacing="0.06em">CHECKS</text>
+<text x="358" y="513" class="m" font-size="13.5" fill="#1f2328" font-weight="600">policy/rendered</text>
+<text x="358" y="532.5" class="s" font-size="11.5" fill="#59636e">the firewall&#x27;s structure, checked on each</text>
+<text x="358" y="548.5" class="s" font-size="11.5" fill="#59636e">ruleset as nftables loaded it</text>
+<rect x="636" y="470" width="280" height="116" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="637" y="471" width="4" height="114" rx="2" fill="#cf222e"/>
+<text x="654" y="492" class="s" font-size="10.5" fill="#cf222e" font-weight="600" letter-spacing="0.06em">CHECKS</text>
+<text x="654" y="513" class="m" font-size="13.5" fill="#1f2328" font-weight="600">tests/live/expect.py</text>
+<text x="654" y="532.5" class="s" font-size="11.5" fill="#59636e">the values Gate 2 expects: addresses, routes,</text>
+<text x="654" y="548.5" class="s" font-size="11.5" fill="#59636e">who may reach what</text>
+<text x="936" y="630" class="s" font-size="10.5" fill="#818b98" text-anchor="end">from network.yaml · drawn by scripts/diagrams.py</text>
+</svg>
