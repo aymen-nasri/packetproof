@@ -28,6 +28,8 @@ def test_oversized_packet_does_not_cross_whole(lab):
     res = lab.sh("rtr-a", f"ping -M do -s 1393 -c 2 -W 2 {RTR_B_WG}; echo rc=$?")
     out = res.stdout + res.stderr
     assert "rc=0" not in out, f"a 1421-byte don't-fragment packet crossed the tunnel:\n{out}\n{_state(lab)}"
+    # Refused for the right reason: the 1420-byte MTU, not a tunnel that is simply down.
+    assert "mtu=1420" in out or "message too long" in out.lower(), f"refused, but not by the MTU:\n{out}"
 
 
 def test_large_download_across_tunnel(lab):
