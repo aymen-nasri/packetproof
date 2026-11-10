@@ -18,6 +18,7 @@ concurrency:
 env:
   BATFISH_IMAGE: batfish/allinone@sha256:54cb0ed94fd9a3c1ca0985f73e5be479e955cee9b9f6a6799b66be3364fd8e5c
   PP_RENDER: build/lab
+  PP_RENDER_STATUS: results/render-status.json
 
 jobs:
   grade:
@@ -71,14 +72,10 @@ jobs:
         run: make test VENV="$RUNNER_TEMP/venv" RENDER="$PP_RENDER" FAULT="$FAULT" EVIDENCE="evidence/$CASE" || true
       - name: Record the verdicts
         if: ${{ !cancelled() }}
-        env:
-          RENDER_FAILED: ${{ steps.render.outputs.failed }}
         run: |
-          args=()
-          [ "$RENDER_FAILED" = true ] && args=(--render-failed)
           python3 gate3/collect.py --id "$CASE" --gate1 results/gate1.json --gate2 results/gate2.xml \
-            --deploy "$PP_RENDER/deploy.json" --seconds "$(( $(date +%s) - $(cat "$RUNNER_TEMP/t0") ))" \
-            "${args[@]}" --out "results/$CASE.json"
+            --render-status "$PP_RENDER_STATUS" --deploy "$PP_RENDER/deploy.json" \
+            --seconds "$(( $(date +%s) - $(cat "$RUNNER_TEMP/t0") ))" --out "results/$CASE.json"
           [ -f results/gate2.xml ] && cp results/gate2.xml "results/$CASE-gate2.xml" || true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}

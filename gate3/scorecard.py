@@ -3,9 +3,10 @@
 
   caught      the gate failed on the fault while the baseline passed in the same run
   related     at least one failing check relates to the fault's layer (gate3/related.yaml);
-              otherwise the catch is "incidental"
+              otherwise the catch is "incidental", and reported separately from the headline
   escaped     both gates passed on the fault
-  void        the baseline failed, so nothing in this run can be scored
+  void        the baseline failed, or a gate could not judge the fault (a tool, the harness or
+              the runner failed: amendment A2), so the fault is re-run, never counted as a catch
 
 Attack paths come from the baseline's Gate 2 run (tests/live/test_attacks.py): each test fails if
 its attack gets through or if its legitimate pair fails, and the failure message says which.
@@ -56,21 +57,47 @@ def is_related(layer: str, gate: str, failing: list[str]) -> bool:
     return False
 
 
+# Each attack path's legitimate pair, as docs/method.md part 5 defines it.
+AP_PAIRS = {
+    "AP-01": "app1 connects to db 5432", "AP-02": "app2 connects to db 5432",
+    "AP-03": "admin connects to app1 on 22", "AP-04": "client-a gets HTTPS from haproxy",
+    "AP-05": "admin reaches rtr-a on 22", "AP-06": "admin reaches 172.16.255.1 on 22",
+    "AP-07": "admin reaches rtr-b on 22 across the tunnel",
+    "AP-08": "client-b gets HTTPS from haproxy across the tunnel",
+    "AP-09": "client-a reaches the outside on 443 through NAT",
+    "AP-10": "client-a resolves a name through the resolver, and the outside server logs it",
+    "AP-11": "the resolver's own query to the outside is answered",
+    "AP-12": "real app1 connects to db 5432",
+}
+
+
 def attack_paths(junit: Path) -> list[dict]:
-    out = []
+    """Verdicts of the 12 attack paths from the baseline's Gate 2 run. Raises when the file is
+    missing or does not hold all 12: "0 of 0 blocked" must never be published."""
     if not junit.exists():
-        return out
+        raise SystemExit(f"no baseline Gate 2 results at {junit}: attack paths cannot be scored")
+    out = []
     for case in ET.parse(junit).getroot().iter("testcase"):
         name = case.get("name")
         if name in AP_NAMES:
-            failure = case.find("failure") if case.find("failure") is not None else case.find("error")
-            if failure is None:
+            fail, err = case.find("failure"), case.find("error")
+            if fail is None and err is None:
                 verdict, why = "blocked", "attack blocked and legitimate pair passed"
             else:
-                msg = (failure.get("message") or "").splitlines()[0][:300]
-                verdict = "invalid" if "legitimate pair failed" in msg else "open"
+                el = fail if fail is not None else err
+                msg = (el.get("message") or "").splitlines()[0][:300] if (el.get("message") or "") else ""
+                if "legitimate pair failed" in msg:
+                    verdict = "invalid"
+                elif fail is None or "did not run" in msg or "RuntimeError" in msg:
+                    verdict = "not run"
+                else:
+                    verdict = "open"
                 why = msg
-            out.append({"id": AP_NAMES[name][:5], "name": AP_NAMES[name], "verdict": verdict, "detail": why})
+            ap_id = AP_NAMES[name][:5]
+            out.append({"id": ap_id, "name": AP_NAMES[name], "legitimate_pair": AP_PAIRS[ap_id],
+                        "verdict": verdict, "detail": why})
+    if len(out) != len(AP_NAMES):
+        raise SystemExit(f"the baseline ran {len(out)} of {len(AP_NAMES)} attack paths")
     return sorted(out, key=lambda x: x["id"])
 
 
@@ -93,13 +120,19 @@ def main() -> int:
             row.update(verdict="missing")
         elif not baseline_ok:
             row.update(verdict="void", reason="the baseline failed in this run")
+        elif r["gate1"]["passed"] is None or (r["gate1"]["passed"] is True and r["gate2"]["passed"] is None):
+            # A gate that could not judge is never a catch (amendment A2). Gate 1 failing for real
+            # is a catch whatever Gate 2 did; otherwise both gates must have judged.
+            why = r["gate1"]["failing"] if r["gate1"]["passed"] is None else r["gate2"]["failing"]
+            row.update(verdict="void", reason="a gate could not judge this fault: " + "; ".join(why[:3]),
+                       gate1_tool_errors=r["gate1"].get("tool_errors", []))
         else:
             g1, g2 = r["gate1"]["passed"] is False, r["gate2"]["passed"] is False
             row.update(
                 gate1_caught=g1, gate2_caught=g2,
                 gate1_related=g1 and is_related(fault["layer"], "gate1", r["gate1"]["failing"]),
                 gate2_related=g2 and is_related(fault["layer"], "gate2", r["gate2"]["failing"]),
-                gate1_failing=r["gate1"]["failing"][:12], gate2_failing=r["gate2"]["failing"][:20],
+                gate1_failing=r["gate1"]["failing"], gate2_failing=r["gate2"]["failing"],
                 seconds=r.get("seconds"),
             )
             if g1:
@@ -113,16 +146,21 @@ def main() -> int:
         rows.append(row)
 
     scored = [r for r in rows if r["verdict"] not in ("void", "missing")]
+    if len(scored) != len(rows):
+        print(f"WARNING: {len(rows) - len(scored)} fault(s) void or missing: re-run them (method part 6)")
     summary = {
         "baseline_passed": baseline_ok,
         "faults": len(rows),
         "scored": len(scored),
         "gate1_caught": sum(1 for r in scored if r.get("gate1_caught")),
         "gate2_caught": sum(1 for r in scored if r.get("gate2_caught")),
-        "first_caught_by_gate1": sum(1 for r in scored if r["verdict"].startswith("caught by gate 1")),
-        "caught_only_by_gate2": sum(1 for r in scored if r["verdict"].startswith("caught by gate 2")),
+        # Part 6: an incidental catch is reported separately, so the headline counts related ones.
+        "first_caught_by_gate1": sum(1 for r in scored if r["verdict"] == "caught by gate 1"),
+        "caught_only_by_gate2": sum(1 for r in scored if r["verdict"] == "caught by gate 2"),
         "escaped": sum(1 for r in scored if r["verdict"] == "escaped"),
         "incidental": sum(1 for r in scored if "incidental" in r["verdict"]),
+        "void": sum(1 for r in rows if r["verdict"] == "void"),
+        "missing": sum(1 for r in rows if r["verdict"] == "missing"),
         "predictions_right": sum(1 for r in scored if r.get("prediction_right")),
     }
     times = [r["seconds"] for r in scored if r.get("seconds")]
@@ -151,10 +189,13 @@ def render_html(card: dict) -> str:
         f"<td>{e(r['title'])}</td><td>{cell(r.get('gate1_caught'))}</td><td>{cell(r.get('gate2_caught'))}</td>"
         f"<td><b>{e(r['verdict'])}</b></td><td>{e(r['predicted'])}</td></tr>"
         for r in card["faults"])
-    ap_rows = "\n".join(f"<tr><td>{e(x['name'])}</td><td><b>{e(x['verdict'])}</b></td><td>{e(x['detail'])}</td></tr>"
-                        for x in card["attack_paths"])
+    ap_rows = "\n".join(f"<tr><td>{e(x['name'])}</td><td>{e(x['legitimate_pair'])}</td><td><b>{e(x['verdict'])}</b></td>"
+                        f"<td>{e(x['detail'])}</td></tr>" for x in card["attack_paths"])
+    extra = (f" {s['incidental']} more were caught incidentally (no failing check related to the fault)."
+             if s["incidental"] else "")
+    extra += f" {s['void']} could not be judged and must be re-run." if s.get("void") else ""
     headline = (f"Of {s['scored']} planted faults, the static gate caught {s['first_caught_by_gate1']}, "
-                f"the live copy caught {s['caught_only_by_gate2']} more, and {s['escaped']} escaped both. "
+                f"the live copy caught {s['caught_only_by_gate2']} more, and {s['escaped']} escaped both.{extra} "
                 f"{s['attack_paths']['blocked']} of {s['attack_paths']['total']} attack paths were blocked "
                 f"with their legitimate flows passing.")
     return f"""<!doctype html>
@@ -178,7 +219,7 @@ Baseline passed in this run: {cell(s['baseline_passed'])}.</p>
 {fault_rows}
 </table></div>
 <h2>Attack paths from a compromised DMZ host</h2><div class="wrap"><table>
-<tr><th>Attack</th><th>Verdict</th><th>Detail</th></tr>
+<tr><th>Attack</th><th>Legitimate pair</th><th>Verdict</th><th>Detail</th></tr>
 {ap_rows}
 </table></div>
 <p class="muted">Read next: <a href="https://github.com/aymen-nasri/packetproof/blob/main/docs/limits.md">what each gate cannot see, and why each escape changed no traffic</a> &middot;

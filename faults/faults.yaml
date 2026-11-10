@@ -41,9 +41,11 @@
   layer: Routing
   where: intent
   predicted: gate2
-  title: Static route on rtr-b for 172.16.0.0/16 via isp beats BGP, so site-to-site traffic leaves in clear
+  # Amended (docs/method.md, A2): the original 172.16.0.0/16 lost to the /24s learned over the
+  # tunnel (longest prefix wins before distance), so it could never bite.
+  title: Static route on rtr-b for the DMZ 172.16.20.0/24 via isp, same length as BGP's and a lower distance, so site B's traffic to the DMZ leaves in clear
   intent:
-    - {op: set, path: [sites, {name: b}, static_routes], value: [{prefix: 172.16.0.0/16, via: 203.0.113.0}]}
+    - {op: set, path: [sites, {name: b}, static_routes], value: [{prefix: 172.16.20.0/24, via: 203.0.113.0}]}
 
 - id: F06
   layer: BGP
