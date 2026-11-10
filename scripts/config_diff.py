@@ -28,7 +28,8 @@ def frr_reload_test(router: str, base: Path, new: Path) -> str:
     name = f"pp-diff-{router}"
     run(["docker", "rm", "-f", name])
     d = base / "routers" / router
-    run(["docker", "run", "-d", "--name", name, "--hostname", router, "--network", "none",
+    # Privileged like the lab's routers: zebra cannot start, and the config never loads, without it.
+    run(["docker", "run", "-d", "--name", name, "--hostname", router, "--network", "none", "--privileged",
          "-v", f"{d / 'frr.conf'}:/etc/frr/frr.conf", "-v", f"{d / 'daemons'}:/etc/frr/daemons",
          "-v", f"{d / 'vtysh.conf'}:/etc/frr/vtysh.conf", ROUTER_IMAGE])
     try:
