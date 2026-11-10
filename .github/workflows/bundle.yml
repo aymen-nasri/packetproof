@@ -23,13 +23,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Python dependencies
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt
+        run: make venv VENV="$RUNNER_TEMP/venv"
       - name: Render and pack deterministically
         run: |
           set -o pipefail  # tar | gzip: a failed tar must fail the step
-          "$RUNNER_TEMP/venv/bin/python" -m packetproof render --out out/lab
+          make render VENV="$RUNNER_TEMP/venv" RENDER=out/lab
           echo "$GITHUB_SHA" > out/lab/COMMIT
           # Reproducible: every file gets the commit's time (SOURCE_DATE_EPOCH), not 0. NSD will
           # not load a zone file whose mtime is 0 (prod run 42827614277).

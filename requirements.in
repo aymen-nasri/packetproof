@@ -1,0 +1,4 @@
+# Runtime dependencies of the generator, Gate 1 and Gate 2, pinned exactly.
+pyyaml==6.0.3
+jsonschema==4.26.0
+pytest==9.2.0

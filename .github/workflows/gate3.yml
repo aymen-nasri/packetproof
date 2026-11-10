@@ -48,36 +48,27 @@ jobs:
           curl -fsSLo "$RUNNER_TEMP/conftest.tgz" https://github.com/open-policy-agent/conftest/releases/download/v0.71.1/conftest_0.71.1_Linux_x86_64.tar.gz
           echo "c3f6b2a753bd56e377a1e51a95ae3e057f926f2e9139f7d5b5dfbbaf810f7985  $RUNNER_TEMP/conftest.tgz" | sha256sum -c
           tar xzf "$RUNNER_TEMP/conftest.tgz" -C "$RUNNER_TEMP" conftest
-      - name: Install Python dependencies
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt -r requirements-batfish.txt
+      - name: Install Python dependencies, hash-locked
+        run: make venv-batfish VENV="$RUNNER_TEMP/venv"
       - name: Render, with the planted fault unless this is the baseline
         id: render
         run: |
-          args=()
-          [ "$CASE" != baseline ] && args=(--fault "$CASE")
-          if ! "$RUNNER_TEMP/venv/bin/python" -m packetproof render "${args[@]}" --out "$PP_RENDER"; then
+          fault=""
+          [ "$CASE" != baseline ] && fault="$CASE"
+          echo "fault=$fault" >> "$GITHUB_OUTPUT"
+          if ! make render VENV="$RUNNER_TEMP/venv" RENDER="$PP_RENDER" FAULT="$fault"; then
             echo "failed=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Gate 1
         if: ${{ steps.render.outputs.failed != 'true' }}
-        run: >-
-          "$RUNNER_TEMP/venv/bin/python" scripts/gate1.py --render "$PP_RENDER" --out results/gate1.json
-          --conftest "$RUNNER_TEMP/conftest" || true
-      - name: Gate 2, deploy and test
+        env:
+          FAULT: ${{ steps.render.outputs.fault }}
+        run: make gate1 VENV="$RUNNER_TEMP/venv" RENDER="$PP_RENDER" FAULT="$FAULT" CONFTEST="$RUNNER_TEMP/conftest" || true
+      - name: Gate 2 (deploy, test, collect evidence, destroy)
         if: ${{ steps.render.outputs.failed != 'true' }}
-        run: |
-          "$RUNNER_TEMP/venv/bin/python" -m packetproof deploy --render "$PP_RENDER" || true
-          PP_RENDER="$PP_RENDER" "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -q -p no:cacheprovider \
-            --junitxml results/gate2.xml || true
-      - name: Collect evidence and destroy
-        if: always()
-        run: |
-          if [ -f "$PP_RENDER/intent.json" ]; then
-            "$RUNNER_TEMP/venv/bin/python" -m packetproof evidence --render "$PP_RENDER" --out "evidence/$CASE" || true
-            "$RUNNER_TEMP/venv/bin/python" -m packetproof destroy --render "$PP_RENDER" || true
-          fi
+        env:
+          FAULT: ${{ steps.render.outputs.fault }}
+        run: make test VENV="$RUNNER_TEMP/venv" RENDER="$PP_RENDER" FAULT="$FAULT" EVIDENCE="evidence/$CASE" || true
       - name: Record the verdicts
         if: ${{ !cancelled() }}
         env:
@@ -120,7 +111,7 @@ jobs:
         run: |
           mkdir -p results
           find artifacts -path '*/results/*' \( -name 'baseline*' -o -name 'F[0-9][0-9]*' \) -exec cp {} results/ \;
-          python3 -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt
+          make venv VENV="$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/python" gate3/scorecard.py --results results --run-url "$RUN_URL" --out site
           cp results/*.json site/ 2>/dev/null || true
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
