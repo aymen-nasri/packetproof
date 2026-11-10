@@ -166,6 +166,7 @@ def ruleset(net: Network, site: dict) -> str:
         f'        iifname "{UPLINK_IF}" udp dport {net.data["tunnel"]["port"]} accept comment "WireGuard"',
         f'        iifname "{TUNNEL_IF}" ip saddr {tun_peer} tcp dport 179 accept comment "BGP over the tunnel"',
     ] + [ind + r for r in inp] + [
+        '        counter comment "dropped by the default policy"',
         "    }",
         "",
         "    chain forward {",
@@ -173,6 +174,7 @@ def ruleset(net: Network, site: dict) -> str:
         "        ct state established,related accept",
         "        ct state invalid drop",
     ] + [ind + r for r in fwd + pf_accept] + [
+        '        counter comment "dropped by the default policy"',
         "    }",
         "",
         "    chain output {",
