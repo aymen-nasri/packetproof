@@ -85,13 +85,16 @@ jobs:
       - name: 5a. Drift check
         if: ${{ !cancelled() }}
         run: '"$RUNNER_TEMP/venv/bin/python" scripts/prod.py drift --new prod/run/to/lab --out results/drift.json'
-      - name: 5b. Gate 2 against prod after the change
+      - name: 5b. Gate 2 against prod after the change, with the tests of the applied version
         if: ${{ !cancelled() }}
         env:
           PP_RENDER: prod/run/from/lab
-        run: >-
-          "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -q -p no:cacheprovider
-          --junitxml results/gate2-after-change.xml
+        run: |
+          # The tests that belong to the bundle just applied, not whatever main holds today.
+          to_commit=$(python3 -c "import json; print(json.load(open('prod/fetched.json'))['to']['commit'])")
+          git fetch -q --depth=1 origin "$to_commit"
+          git checkout -q FETCH_HEAD -- tests/live
+          "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -q -p no:cacheprovider             --junitxml results/gate2-after-change.xml
       - name: Summarise
         if: ${{ !cancelled() }}
         run: |
