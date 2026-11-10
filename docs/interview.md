@@ -55,11 +55,11 @@ was caught by a check rather than noticed by luck:
 > **PacketProof**: proving network changes before merge (Python, containerlab, FRR/BGP,
 > WireGuard, nftables, GitHub Actions). A two-site network defined in one YAML file; every pull
 > request rebuilds it as a disposable copy on a free runner, which must pass routing, segmentation,
-> DNS and TLS tests (median gate time 6.6 min). Graded the gates against 30 planted faults: the
+> DNS and TLS tests (median gate time 7.0 min). Graded the gates against 30 planted faults: the
 > static gate caught 19, the live copy 8, and 3 documented escapes. 12/12 attack paths from a
 > compromised DMZ host blocked while every legitimate flow passed. Configs released signed and
-> attested, verified before an in-place apply that dropped no connections.
+> attested, verified before an in-place apply that dropped no connections; prod's keys managed with SOPS.
 
 Every number comes from a linked run: [scorecard.md](scorecard.md) for the faults and attack paths,
-[prod.md](prod.md) for the apply, and the median of 14 pull-request gate runs (6.2 to 10.0 minutes)
+[prod.md](prod.md) for the apply, and the median of 21 pull-request gate runs (6.2 to 10.0 minutes)
 for the gate time.
