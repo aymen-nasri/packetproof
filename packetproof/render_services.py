@@ -196,9 +196,12 @@ def ca_lines(net: Network) -> list[str]:
         "export STEPPATH=/tmp/step",
         "umask 077",
         "head -c 32 /dev/urandom | base64 > /tmp/step-pw",
+        # In prod the long-lived root comes from SOPS (mounted at /pp-secrets), so every rebuild
+        # keeps the same trust anchor; a pull-request lab gets a fresh root each time.
+        'ROOT=""; [ -s /pp-secrets/root_ca.key ] && ROOT="--root /pp-secrets/root_ca.crt --key /pp-secrets/root_ca.key"',
         f'"$STEP" ca init --deployment-type standalone --name "PacketProof Lab CA" --dns ca.{zone} '
         f"--dns {ca['address']} --address :{port} --provisioner admin --password-file /tmp/step-pw "
-        "--provisioner-password-file /tmp/step-pw --acme",
+        "--provisioner-password-file /tmp/step-pw --acme $ROOT",
         "nohup step-ca /tmp/step/config/ca.json --password-file /tmp/step-pw >/tmp/step-ca.log 2>&1 &",
         "umask 022",
         "mkdir -p /shared/pki/test",

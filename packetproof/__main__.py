@@ -47,6 +47,8 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("deploy", "destroy", "evidence"):
         p = sub.add_parser(name)
         p.add_argument("--render", required=True)
+        if name == "deploy":
+            p.add_argument("--secrets", help="decrypted SOPS file (JSON) with prod's managed identities")
         if name == "evidence":
             p.add_argument("--out", required=True)
     sub.add_parser("faults")
@@ -60,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     from . import lab  # needs docker; imported only for lab commands
     if args.cmd == "deploy":
-        res = lab.deploy(Path(args.render))
+        res = lab.deploy(Path(args.render), Path(args.secrets) if args.secrets else None)
         print(json.dumps(res, indent=2))
         return 0 if res.get("deploy_rc") == 0 else 1
     if args.cmd == "evidence":
