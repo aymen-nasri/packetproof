@@ -48,8 +48,9 @@ def frr_reload_test(router: str, base: Path, new: Path) -> str:
                 d / "frr.conf", new / "routers" / router / "frr.conf")
         run(["docker", "cp", str(new / "routers" / router / "frr.conf"), f"{name}:/tmp/new.conf"])
         res = run(["docker", "exec", name, "/usr/lib/frr/frr-reload.py", "--test", "/tmp/new.conf"])
-        out = (res.stdout + res.stderr).strip()
+        out = res.stdout.strip()  # the plan; frr-reload's INFO logging goes to stderr
         if res.returncode != 0 and "Lines To" not in out:
+            out = (res.stdout + res.stderr).strip()
             return f"frr-reload.py --test failed (rc {res.returncode}); plain diff instead:\n" + plain_diff(
                 d / "frr.conf", new / "routers" / router / "frr.conf")
         return out
