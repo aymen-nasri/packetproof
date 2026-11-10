@@ -103,6 +103,7 @@ def topology(net: Network) -> str:
                 # Hosts are unprivileged: they only need to set their own address and routes.
                 "      privileged: false", "      cap-add:", "        - NET_ADMIN", "      binds:",
                 f"        - hosts/{h['name']}:/pp:ro", f"        - shared:/shared:{mode}",
+                *(["        - secrets/ca:/pp-secrets:ro"] if h["name"] == ca else []),
                 '      cmd: sh -c "sh /pp/start.sh; exec tail -f /dev/null"']
     out.append("  links:")
 
@@ -137,6 +138,7 @@ def render(net: Network, out: Path) -> None:
         shutil.rmtree(out)
     (out / "batfish" / "configs").mkdir(parents=True)
     (out / "shared").mkdir()
+    (out / "secrets" / "ca").mkdir(parents=True)  # filled only in prod, from SOPS
     for s in net.data["sites"]:
         r = s["router"]
         d = out / "routers" / r

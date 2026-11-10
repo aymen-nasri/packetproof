@@ -1,8 +1,10 @@
 """Deploy, wait for, collect evidence from, and destroy a rendered lab.
 
-Runs on any Linux host with Docker, containerlab and sudo (CI uses ubuntu-latest). WireGuard
-private keys are generated inside each router at start-up and never leave it; only public keys
-are read and exchanged.
+Runs on any Linux host with Docker, containerlab and sudo (CI uses ubuntu-latest). In a pull-request
+lab, WireGuard private keys are generated inside each router at start-up and never leave it; only
+public keys are read and exchanged. In prod, deploy() takes the decrypted SOPS file instead: each
+router's long-lived key is piped into it, and the CA's root is mounted for its start-up only
+(docs/secrets.md).
 """
 
 from __future__ import annotations
@@ -35,9 +37,11 @@ def load(render_dir: Path) -> Network:
     return Network(json.loads((render_dir / "intent.json").read_text()))
 
 
-def exchange_keys(render_dir: Path, net: Network, timeout_s: int = 90) -> dict:
-    """Each router generated its own private key at start-up. Read only the public keys and
-    give each router its peer's (or the intent's override, which is how fault F09 is planted)."""
+def exchange_keys(render_dir: Path, net: Network, managed: dict | None = None, timeout_s: int = 90) -> dict:
+    """Each router generated its own private key at start-up. In prod, the SOPS-managed key replaces
+    it, piped straight into the router (never written on the runner's disk). Then read only the
+    public keys and give each router its peer's (or the intent's override, which is how fault F09
+    is planted)."""
     pub: dict[str, str] = {}
     start = time.monotonic()
     for s in net.data["sites"]:
@@ -46,17 +50,31 @@ def exchange_keys(render_dir: Path, net: Network, timeout_s: int = 90) -> dict:
             if time.monotonic() - start > timeout_s:
                 return {"keys_exchanged": False, "waiting_for": r}
             time.sleep(1)
+        if managed and r in managed.get("wireguard", {}):
+            run(["docker", "exec", "-i", container(r), "sh", "-c",
+                 "umask 077; cat > /etc/wireguard/pp-wg.key && wg set wg0 private-key /etc/wireguard/pp-wg.key"],
+                input=managed["wireguard"][r].strip() + "\n")
         pub[r] = dexec(r, "wg", "show", "wg0", "public-key").stdout.strip()
     for s in net.data["sites"]:
         r = s["router"]
         override = render_dir / "routers" / r / "peer.pub.override"
         peer_key = override.read_text().strip() if override.exists() else pub[net.other_site(s["name"])["router"]]
         dexec(r, "sh", "/pp/wg-peer.sh", peer_key)
-    return {"keys_exchanged": True}
+    return {"keys_exchanged": True, "managed_identities": bool(managed)}
 
 
-def deploy(render_dir: Path) -> dict:
+def deploy(render_dir: Path, secrets: Path | None = None) -> dict:
+    """secrets: decrypted SOPS file (JSON) with prod's managed identities; None for a PR lab."""
     net = load(render_dir)
+    managed = json.loads(secrets.read_text()) if secrets else None
+    ca_dir = render_dir / "secrets" / "ca"  # bind-mounted read-only into the CA container
+    ca_dir.mkdir(parents=True, exist_ok=True)
+    if managed and managed.get("ca"):
+        # The CA finds its long-lived root here at start-up and signs a fresh intermediate with it.
+        (ca_dir / "root_ca.crt").write_text(managed["ca"]["root_cert"])
+        key = ca_dir / "root_ca.key"
+        key.write_text(managed["ca"]["root_key"])
+        os.chmod(key, 0o600)
     run(["sudo", "modprobe", "wireguard"])
     run(["sudo", "modprobe", "br_netfilter"], check=False)
     # Bridged lab traffic must not be filtered by the host's (Docker's) iptables FORWARD policy.
@@ -74,8 +92,10 @@ def deploy(render_dir: Path) -> dict:
     (render_dir / "deploy.log").write_text(dep.stdout + dep.stderr)
     result = {"deploy_rc": dep.returncode, "deploy_s": round(time.monotonic() - t0, 1)}
     if dep.returncode == 0:
-        result.update(exchange_keys(render_dir, net))
+        result.update(exchange_keys(render_dir, net, managed))
         result.update(wait_ready(net))
+    # Once the CA is up (or the deploy failed), the root key has no reason to stay on the runner.
+    (ca_dir / "root_ca.key").unlink(missing_ok=True)
     result["total_s"] = round(time.monotonic() - t0, 1)
     (render_dir / "deploy.json").write_text(json.dumps(result, indent=2) + "\n")
     return result

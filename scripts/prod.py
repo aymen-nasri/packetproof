@@ -13,6 +13,9 @@ disruption problems; this path does not.
            two probes each hold one TCP connection and count failed requests
   drift    compare what runs with what the bundle says (FRR and nftables), after a self-test
            that proves a planted drift is detected
+  identities  check that prod runs the SOPS-managed identities: each router's WireGuard key and
+           its peer's, and the CA root that the served certificate chains to, against the public
+           halves committed in secrets/prod-public.yaml
 
 All results go to --out as JSON. Run from the repository root.
 """
@@ -249,9 +252,41 @@ def drift(want: Path) -> dict:
             "ok": clean and self_test["frr_seen"] and self_test["nft_seen"]}
 
 
+def identities(running: Path, public: Path) -> dict:
+    import hashlib
+    import ssl
+
+    import yaml
+
+    want = yaml.safe_load(public.read_text())
+    keys = want["wireguard_public_keys"]
+    wg = {}
+    for r, key in keys.items():
+        own = lab.dexec(r, "wg", "show", "wg0", "public-key").stdout.strip()
+        peers = lab.dexec(r, "wg", "show", "wg0", "peers").stdout.split()
+        peer_ok = sorted(peers) == sorted(k for n, k in keys.items() if n != r)
+        wg[r] = {"own_key_matches": own == key, "peer_key_matches": peer_ok}
+    pem = (running / "shared" / "pki" / "root_ca.crt").read_text()
+    fp = hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest()
+    # The served certificate must chain to the committed root itself, not only to the lab's copy.
+    net = lab.load(running)
+    zone = net.data["dns"]["zone"]
+    lab.run(["docker", "exec", "-i", lab.container("client-a"), "sh", "-c", "cat > /tmp/managed-root.crt"],
+            input=want["ca_root_cert"])
+    res = lab.dexec("client-a", "curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "10",
+                    "--cacert", "/tmp/managed-root.crt", f"https://www.{zone}/")
+    ca = {"root_fingerprint_matches": fp == want["ca_root_fingerprint_sha256"],
+          "served_cert_verifies_with_committed_root": res.returncode == 0 and res.stdout.strip() == "200",
+          "root_fingerprint_sha256": fp}
+    ok = all(v["own_key_matches"] and v["peer_key_matches"] for v in wg.values()) and \
+        ca["root_fingerprint_matches"] and ca["served_cert_verifies_with_committed_root"]
+    return {"wireguard": wg, "ca": ca, "ok": ok}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["fetch", "verify", "extract", "apply", "drift"])
+    ap.add_argument("cmd", choices=["fetch", "verify", "extract", "apply", "drift", "identities"])
+    ap.add_argument("--public", type=Path, default=ROOT / "secrets" / "prod-public.yaml")
     ap.add_argument("--work", type=Path, default=Path("prod"))
     ap.add_argument("--bundle", type=Path)
     ap.add_argument("--dest", type=Path)
@@ -270,6 +305,8 @@ def main() -> int:
         res = {"render": str(extract(a.bundle, a.dest))}
     elif a.cmd == "apply":
         res = apply(a.running, a.new)
+    elif a.cmd == "identities":
+        res = identities(a.running, a.public)
     else:
         res = drift(a.new)
     a.out.parent.mkdir(parents=True, exist_ok=True)

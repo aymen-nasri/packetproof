@@ -145,6 +145,7 @@ Each of these was found by a check, fixed in a commit that says what it saw, and
 - [Week 1](docs/go-no-go.md): go/no-go checks, with every run linked, including the failures
 - [Scorecard](docs/scorecard.md): every Gate 3 run and how each fault was graded
 - [What each gate cannot see](docs/limits.md), [the prod change path](docs/prod.md),
+  [secrets and their rotation](docs/secrets.md),
   [threat model](docs/threat-model.md), [address plan](docs/address-plan.md)
 
 ## License

@@ -8,6 +8,9 @@ name: prod
 #   4. apply the new bundle in place (frr-reload.py, one atomic nft transaction per router) while two
 #      probes each hold one TCP connection and count failed requests
 #   5. check for drift (after a self-test that planted drift is caught), then run all of Gate 2
+# Prod's long-lived identities (both routers' WireGuard keys and the CA root) come from
+# secrets/prod.sops.yaml, decrypted with the age key held only in the prod environment's secret
+# SOPS_AGE_KEY; step 3c checks that prod really runs them (docs/secrets.md).
 on:
   workflow_dispatch:
     inputs:
@@ -30,6 +33,8 @@ jobs:
   change:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # The age key is an environment secret: only jobs that run from main can read it.
+    environment: prod
     permissions:
       contents: read
       actions: read
@@ -49,6 +54,11 @@ jobs:
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
       - name: Install Python dependencies
         run: make venv VENV="$RUNNER_TEMP/venv"
+      - name: Install SOPS 3.13.3, checking its checksum
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/sops" https://github.com/getsops/sops/releases/download/v3.13.3/sops-v3.13.3.linux.amd64
+          echo "e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b  $RUNNER_TEMP/sops" | sha256sum -c
+          chmod +x "$RUNNER_TEMP/sops"
       - name: 1. Pull the signed images by digest and verify them before use
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
@@ -69,13 +79,31 @@ jobs:
         run: |
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py fetch --from-run "$FROM_RUN" --to-run "$TO_RUN" --out prod/fetched.json
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py verify --out results/verify.json
+      - name: Decrypt prod's identities (SOPS, age key from the prod environment)
+        id: decrypt
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "$SOPS_AGE_KEY" ] && [ -f secrets/prod.sops.yaml ]; then
+            umask 077
+            "$RUNNER_TEMP/sops" decrypt --output-type json secrets/prod.sops.yaml > "$RUNNER_TEMP/prod-secrets.json"
+            echo "managed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "managed=false" >> "$GITHUB_OUTPUT"
+            echo "No SOPS-managed identities configured: prod runs with throwaway keys." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
       - name: 3. Rebuild prod from the previous bundle
         run: |
           from=$(python3 -c "import json; print(json.load(open('prod/fetched.json'))['from']['bundle'])")
           to=$(python3 -c "import json; print(json.load(open('prod/fetched.json'))['to']['bundle'])")
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py extract --bundle "$from" --dest prod/run/from --out results/extract-from.json
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py extract --bundle "$to" --dest prod/run/to --out results/extract-to.json
-          make deploy VENV="$RUNNER_TEMP/venv" RENDER=prod/run/from/lab
+          secrets=""
+          [ -f "$RUNNER_TEMP/prod-secrets.json" ] && secrets="$RUNNER_TEMP/prod-secrets.json"
+          make deploy VENV="$RUNNER_TEMP/venv" RENDER=prod/run/from/lab SECRETS="$secrets"
+          # The plaintext is needed only to start the lab.
+          rm -f "$RUNNER_TEMP/prod-secrets.json"
       - name: 3b. Drift check before the change, against the previous bundle
         # A baseline for 5a: what differs after the apply but not before was introduced by it.
         run: '"$RUNNER_TEMP/venv/bin/python" scripts/prod.py drift --new prod/run/from/lab --out results/drift-before.json || true'
@@ -96,6 +124,9 @@ jobs:
           git fetch -q --depth=1 origin "$to_commit"
           git checkout -q FETCH_HEAD -- tests/live
           "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -q -p no:cacheprovider             --junitxml results/gate2-after-change.xml
+      - name: 5c. Prod runs its SOPS-managed identities
+        if: ${{ !cancelled() && steps.decrypt.outputs.managed == 'true' }}
+        run: '"$RUNNER_TEMP/venv/bin/python" scripts/prod.py identities --running prod/run/from/lab --out results/identities.json'
       - name: Summarise
         if: ${{ !cancelled() }}
         run: |
@@ -106,6 +137,7 @@ jobs:
               p = r / n
               return json.loads(p.read_text()) if p.exists() else {}
           v, a, d, d0 = load("verify.json"), load("apply.json"), load("drift.json"), load("drift-before.json")
+          ids = load("identities.json")
           print("### Prod change")
           print(f"- bundles verified: {v.get('ok')}; tampered bundle refused: {v.get('tampered', {}).get('refused')}")
           print(f"- in-place apply took {a.get('apply_seconds')} s; failed requests: {a.get('requests_failed')}; "
@@ -114,6 +146,10 @@ jobs:
           print(f"- drift before the change: {json.dumps(d0.get('routers'))}")
           print(f"- drift self-test: {d.get('self_test')}; no drift after the change: {d.get('ok')}")
           print(f"- drift after the change: {json.dumps(d.get('routers'))}")
+          if ids:
+              print(f"- SOPS-managed identities in use: {ids.get('ok')} `{json.dumps(ids)}`")
+          else:
+              print("- SOPS-managed identities: not configured or not checked")
           PY
           python3 scripts/junit_summary.py results/gate2-after-change.xml "Gate 2 after the change" >> "$GITHUB_STEP_SUMMARY" || true
       - name: Collect evidence and destroy
