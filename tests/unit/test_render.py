@@ -127,3 +127,54 @@ def test_secrets_files_keep_private_material_out_of_the_public_half(tmp_path):
     secret = yaml.safe_load((tmp_path / "s.yaml").read_text())
     assert secret["wireguard"] == {"rtr-a": "PRIV-A", "rtr-b": "PRIV-B"}
     assert secret["ca"]["root_cert"] == pem and "SECRET" in secret["ca"]["root_key"]
+
+
+def test_no_node_joins_the_management_network(baseline):
+    """Review of v1.0.0: containerlab's management network put every node on one shared L2
+    segment, a path between hosts that never crossed a router. No node may join it."""
+    topo = yaml.safe_load((baseline / "topo.clab.yml").read_text())
+    nodes = {n: d for n, d in topo["topology"]["nodes"].items() if d.get("kind") == "linux"}
+    assert nodes and all(d.get("network-mode") == "none" for d in nodes.values()), \
+        {n: d.get("network-mode") for n, d in nodes.items()}
+
+
+def test_site_routers_forward_only_after_their_firewall_loads(baseline):
+    topo = yaml.safe_load((baseline / "topo.clab.yml").read_text())
+    for r in ("rtr-a", "rtr-b"):
+        assert topo["topology"]["nodes"][r]["sysctls"]["net.ipv4.ip_forward"] == 0
+        up = (baseline / "routers" / r / "up.sh").read_text().splitlines()
+        assert up.index("nft -f /pp/ruleset.nft") < up.index("echo 1 > /proc/sys/net/ipv4/ip_forward")
+
+
+def test_isp_filter_refuses_private_space_at_every_length(baseline):
+    """Without `le 32`, `deny 172.16.0.0/12` matches only the /12 itself, and a more specific
+    private route from the ISP would be accepted (review of v1.0.0)."""
+    for r in ("rtr-a", "rtr-b"):
+        lines = (baseline / "routers" / r / "frr.conf").read_text().splitlines()
+        for bogon in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8"):
+            assert any(l.startswith("ip prefix-list PL-ISP-IN") and l.endswith(f"deny {bogon} le 32") for l in lines), (r, bogon)
+
+
+def test_cross_site_rules_are_pinned_to_the_tunnel(baseline):
+    """INV-07 and INV-04 as a backstop in the firewall: a rule for the other site's addresses never
+    lets traffic leave by the uplink, and a router never forwards the other site's users to the
+    internet (their own router does that, with its own NAT)."""
+    other = {"rtr-a": ("172.24.",), "rtr-b": ("172.16.",)}
+    for r in ("rtr-a", "rtr-b"):
+        for line in (baseline / "routers" / r / "ruleset.nft").read_text().splitlines():
+            line = line.strip()
+            if not line.endswith('"') or " accept " not in line or "ct status dnat" in line:
+                continue
+            remote = any(f"ip saddr {p}" in line or f"ip daddr {p}" in line for p in other[r]) or \
+                any(f"ip saddr {{ {p}" in line or f"ip daddr {{ {p}" in line for p in other[r])
+            if remote:
+                assert '"wg0"' in line and 'oifname "eth1"' not in line, (r, line)
+
+
+def test_dmz_and_db_hosts_get_only_the_names_they_use(baseline):
+    """A compromised DMZ host is not handed the inside DNS view: haproxy gets the CA's name for
+    ACME and nothing else; ns1 and db get none."""
+    def hosts_lines(h):
+        return [l for l in (baseline / "hosts" / h / "start.sh").read_text().splitlines() if "/etc/hosts" in l]
+    assert hosts_lines("haproxy") == ["echo '172.16.50.10 ca.packetproof.example' >> /etc/hosts"]
+    assert hosts_lines("ns1") == [] and hosts_lines("db") == []

@@ -77,7 +77,10 @@ def site_router(net: Network, site: dict) -> str:
         out.append(f"ip route {r['prefix']} {r['via']}")
     out.append("!")
 
-    isp_in = _prefix_list("PL-ISP-IN", BOGONS + [f"{site['public_prefix']} le 32"], "deny", 10)
+    # `le 32`: without it a prefix-list entry matches only that exact length, and a more specific
+    # private route from the ISP (172.16.30.0/25, say) would be accepted and win (review of v1.0.0).
+    isp_in = _prefix_list("PL-ISP-IN", [f"{b} le 32" for b in BOGONS] + [f"{site['public_prefix']} le 32"],
+                          "deny", 10)
     isp_in += ["ip prefix-list PL-ISP-IN seq 100 permit 0.0.0.0/0 le 32"]
     out += isp_in
     out += _prefix_list("PL-ISP-OUT", site["bgp"]["isp"]["advertise"])
