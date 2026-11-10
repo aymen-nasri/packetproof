@@ -75,12 +75,17 @@ def hold(url: str, seconds: float, cacert: str | None, interval: float = 0.2) ->
             return http.client.HTTPSConnection(u.hostname, u.port or 443, timeout=2, context=ctx)
         return http.client.HTTPConnection(u.hostname, u.port or 80, timeout=2)
 
-    stats = {"ok": 0, "failed": 0, "connections": 1, "errors": []}
+    stats = {"ok": 0, "failed": 0, "connections": 0, "errors": []}
     conn = connect()
     start = time.monotonic()
     end = start + seconds
     while time.monotonic() < end:
         try:
+            if conn.sock is None:
+                # http.client reconnects silently after a response that closed the connection;
+                # count every real TCP connection, not only the ones after an error.
+                conn.connect()
+                stats["connections"] += 1
             conn.request("GET", u.path or "/")
             resp = conn.getresponse()
             resp.read()
@@ -88,14 +93,13 @@ def hold(url: str, seconds: float, cacert: str | None, interval: float = 0.2) ->
                 stats["ok"] += 1
             else:
                 stats["failed"] += 1
+                stats["errors"].append(f"HTTP{resp.status}@{time.time():.3f}")
         except Exception as exc:  # any failure counts; reconnect and keep measuring
             stats["failed"] += 1
-            stats["errors"].append(f"{type(exc).__name__}@{time.monotonic() - start:.1f}s")
+            stats["errors"].append(f"{type(exc).__name__}@{time.time():.3f}")
             conn.close()
             conn = connect()
-            stats["connections"] += 1
         time.sleep(interval)
-    stats["errors"] = stats["errors"][:10]
     return stats
 
 

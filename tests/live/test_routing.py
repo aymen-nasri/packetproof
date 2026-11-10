@@ -40,7 +40,9 @@ def test_other_site_learned_over_the_tunnel(lab, router, prefixes):
 def test_isp_holds_no_private_prefix(lab):
     """INV-06: nothing inside 172.16.0.0/12 ever reaches the ISP."""
     private = ipaddress.ip_network("172.16.0.0/12")
-    leaked = [p for p in lab.routes("isp") if ipaddress.ip_network(p).subnet_of(private)]
+    rib = lab.routes("isp")
+    assert "198.51.100.64/27" in rib and "203.0.113.64/27" in rib, f"isp's table is not complete: {sorted(rib)}"
+    leaked = [p for p in rib if ipaddress.ip_network(p).subnet_of(private)]
     assert not leaked, f"private prefixes on isp: {leaked}"
 
 

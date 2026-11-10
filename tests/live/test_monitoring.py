@@ -27,7 +27,12 @@ def test_every_probe_succeeds(lab):
 
 
 def test_certificate_expiry_is_visible(lab):
-    res = _query(lab, 'probe_ssl_earliest_cert_expiry{job="www-tls-expiry"} - time()')
+    deadline = time.time() + 60
+    res = []
+    while time.time() < deadline and not res:  # no reliance on an earlier test having waited
+        res = _query(lab, 'probe_ssl_earliest_cert_expiry{job="www-tls-expiry"} - time()')
+        if not res:
+            time.sleep(5)
     assert res, "no TLS expiry metric"
     seconds = float(res[0]["value"][1])
     assert 0 < seconds <= 25 * 3600, f"certificate expires in {seconds} s"

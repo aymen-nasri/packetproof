@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-import filecmp
 from pathlib import Path
 
 import pytest
@@ -62,8 +61,11 @@ def test_rendering_is_deterministic(tmp_path):
     a, b = tmp_path / "a", tmp_path / "b"
     render_lab.render(Network(copy.deepcopy(NETWORK)), a)
     render_lab.render(Network(copy.deepcopy(NETWORK)), b)
-    cmp = filecmp.dircmp(a, b)
-    assert not cmp.diff_files and not cmp.left_only and not cmp.right_only
+    files_a = sorted(p.relative_to(a) for p in a.rglob("*") if p.is_file())
+    files_b = sorted(p.relative_to(b) for p in b.rglob("*") if p.is_file())
+    assert files_a == files_b and len(files_a) > 20, (len(files_a), len(files_b))
+    differ = [str(f) for f in files_a if (a / f).read_bytes() != (b / f).read_bytes()]
+    assert not differ, differ
 
 
 def test_thirty_faults_defined():

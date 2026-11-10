@@ -41,7 +41,12 @@ def _serve_and_verify(lab, cert: str, port: int, chain: str = "") -> str:
     chain_opt = f"-cert_chain {chain}" if chain else ""
     lab.bg("client-a", f"timeout 15 openssl s_server -accept 127.0.0.1:{port} -cert /shared/pki/test/{cert}.crt "
                        f"-key /shared/pki/test/{cert}.key {chain_opt} -www")
-    lab.sh("client-a", "sleep 2")
+    for _ in range(50):
+        if lab.sh("client-a", f"pp-probe.py tcp 127.0.0.1 {port} --timeout 1").stdout.strip() == "open":
+            break
+        lab.sh("client-a", "sleep 0.2")
+    else:
+        raise RuntimeError(f"probe did not run: the test TLS server on port {port} did not start")
     return _verify(lab, f"127.0.0.1:{port}", f"www.{ZONE}")
 
 
@@ -54,3 +59,6 @@ def test_expired_certificate_refused(lab):
 def test_untrusted_issuer_refused(lab):
     out = _serve_and_verify(lab, "untrusted", 8444)
     assert "unable to get local issuer certificate" in out, out[-600:]
+    # The same error would appear for a lab leaf sent without its intermediate; make sure this is
+    # the certificate from the root nobody trusts.
+    assert "Untrusted Root" in out, out[-600:]
