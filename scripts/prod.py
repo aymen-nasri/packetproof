@@ -194,7 +194,8 @@ def _reference_frr(r: str, want: Path) -> list[str]:
     d = (want / "routers" / r).resolve()
     name = f"pp-ref-{r}"
     run(["docker", "rm", "-f", name])
-    run(["docker", "run", "-d", "--name", name, "--network", "none", "-v", f"{d / 'frr.conf'}:/etc/frr/frr.conf",
+    # Privileged like the lab's routers: zebra cannot start, and the config never loads, without it.
+    run(["docker", "run", "-d", "--name", name, "--hostname", r, "--network", "none", "--privileged", "-v", f"{d / 'frr.conf'}:/etc/frr/frr.conf",
          "-v", f"{d / 'daemons'}:/etc/frr/daemons", "-v", f"{d / 'vtysh.conf'}:/etc/frr/vtysh.conf", ROUTER_IMAGE])
     try:
         out = ""
