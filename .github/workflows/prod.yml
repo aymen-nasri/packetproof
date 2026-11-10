@@ -87,7 +87,11 @@ jobs:
           set -euo pipefail
           if [ -n "$SOPS_AGE_KEY" ] && [ -f secrets/prod.sops.yaml ]; then
             umask 077
-            "$RUNNER_TEMP/sops" decrypt --output-type json secrets/prod.sops.yaml > "$RUNNER_TEMP/prod-secrets.json"
+            # A key stored from Windows PowerShell 5.1 through a pipe arrives with a UTF-8 byte-order
+            # mark and a CR, which age rejects ("unknown identity type", run 42878657349).
+            key=$(printf '%s' "$SOPS_AGE_KEY" | sed '1s/^\xEF\xBB\xBF//' | tr -d '\r')
+            SOPS_AGE_KEY="$key" "$RUNNER_TEMP/sops" decrypt --output-type json secrets/prod.sops.yaml \
+              > "$RUNNER_TEMP/prod-secrets.json"
             echo "managed=true" >> "$GITHUB_OUTPUT"
           else
             echo "managed=false" >> "$GITHUB_OUTPUT"
