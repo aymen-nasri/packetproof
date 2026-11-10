@@ -11,9 +11,11 @@ on:
 
 permissions: {}
 
+# A new push to a pull request replaces its older run. On main every run finishes: it is the only
+# test of the merged code, and release.yml and prod.py require it (review of v1.0.0).
 concurrency:
   group: pr-gate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   unit:
@@ -101,6 +103,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
           id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
             --jq '.[] | select(.body | startswith("<!-- packetproof-config-diff -->")) | .id' | head -n 1)
           if [ -n "$id" ]; then

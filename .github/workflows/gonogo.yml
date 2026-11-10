@@ -14,7 +14,6 @@ concurrency:
 
 env:
   BATFISH_IMAGE: batfish/allinone@sha256:54cb0ed94fd9a3c1ca0985f73e5be479e955cee9b9f6a6799b66be3364fd8e5c
-  PYBATFISH_VERSION: "2026.9.17.3748"
 
 jobs:
   lab:
@@ -62,10 +61,8 @@ jobs:
           persist-credentials: false
       - name: Start Batfish, pinned by digest
         run: docker run -d --name batfish -p 9996:9996 "$BATFISH_IMAGE"
-      - name: Install pybatfish
-        run: |
-          python3 -m venv "$RUNNER_TEMP/bf"
-          "$RUNNER_TEMP/bf/bin/pip" install -q "pybatfish==$PYBATFISH_VERSION"
+      - name: Install pybatfish, hash-locked
+        run: make venv-batfish VENV="$RUNNER_TEMP/bf"
       - name: Render the baseline, the planted error and the tunnel snapshot
         run: |
           python3 week1/render.py --lab w1-bgp --out build/w1-bgp
@@ -112,8 +109,7 @@ jobs:
       - name: Start Batfish and install pybatfish
         run: |
           docker run -d --name batfish -p 9996:9996 "$BATFISH_IMAGE"
-          python3 -m venv "$RUNNER_TEMP/bf"
-          "$RUNNER_TEMP/bf/bin/pip" install -q "pybatfish==$PYBATFISH_VERSION"
+          make venv-batfish VENV="$RUNNER_TEMP/bf"  # hash-locked
       - name: Static stage, render and ask Batfish test B's questions
         run: |
           python3 week1/render.py --lab w1-bgp --out build/w1-bgp
