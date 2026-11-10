@@ -2,7 +2,8 @@ name: pr-gate
 
 # Every pull request, and every push to main, must pass the gates. Gate 1 checks the intent and
 # the rendered configs without running them; Gate 2 deploys the whole two-site network in
-# containerlab on this runner and sends real traffic at it.
+# containerlab on this runner and sends real traffic at it. Every step a developer would run is a
+# `make` target, so the same commands run locally and here.
 on:
   pull_request:
   push:
@@ -25,12 +26,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install Python dependencies
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt
+      - name: Install Python dependencies, hash-locked
+        run: make venv VENV="$RUNNER_TEMP/venv"
       - name: Unit tests
-        run: '"$RUNNER_TEMP/venv/bin/python" -m pytest -q -p no:cacheprovider tests/unit'
+        run: make unit VENV="$RUNNER_TEMP/venv"
 
   gate1:
     name: Gate 1 (static)
@@ -49,22 +48,16 @@ jobs:
       - name: Start Batfish, pinned by digest
         run: docker run -d --name batfish -p 9996:9996 "$BATFISH_IMAGE"
       - name: Build the router image
-        run: docker build -q -t packetproof/router:dev images/router
+        run: make image-router
       - name: Install Conftest 0.71.1, checking its checksum
         run: |
           curl -fsSLo "$RUNNER_TEMP/conftest.tgz" https://github.com/open-policy-agent/conftest/releases/download/v0.71.1/conftest_0.71.1_Linux_x86_64.tar.gz
           echo "c3f6b2a753bd56e377a1e51a95ae3e057f926f2e9139f7d5b5dfbbaf810f7985  $RUNNER_TEMP/conftest.tgz" | sha256sum -c
           tar xzf "$RUNNER_TEMP/conftest.tgz" -C "$RUNNER_TEMP" conftest
-      - name: Install Python dependencies
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt -r requirements-batfish.txt
-      - name: Render the network (schema checked here)
-        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof render --out "$PP_RENDER"'
-      - name: Gate 1 checks
-        run: >-
-          "$RUNNER_TEMP/venv/bin/python" scripts/gate1.py --render "$PP_RENDER"
-          --out results/gate1.json --conftest "$RUNNER_TEMP/conftest"
+      - name: Install Python dependencies, hash-locked
+        run: make venv-batfish VENV="$RUNNER_TEMP/venv"
+      - name: Gate 1 (renders first, so the schema is checked there)
+        run: make gate1 VENV="$RUNNER_TEMP/venv" RENDER="$PP_RENDER" CONFTEST="$RUNNER_TEMP/conftest"
       - name: Summarise
         if: ${{ !cancelled() }}
         run: cat results/gate1.md >> "$GITHUB_STEP_SUMMARY"
@@ -129,27 +122,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-lab
-      - name: Install Python dependencies
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install -q -r requirements.txt
-      - name: Render the network from network.yaml
-        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof render --out "$PP_RENDER"'
-      - name: Deploy the live copy
-        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof deploy --render "$PP_RENDER"'
-      - name: Gate 2 tests
-        run: >-
-          "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -v -p no:cacheprovider
-          --junitxml results/gate2.xml
+      - name: Install Python dependencies, hash-locked
+        run: make venv VENV="$RUNNER_TEMP/venv"
+      - name: Gate 2 (render, deploy, test, collect evidence, destroy)
+        run: make test VENV="$RUNNER_TEMP/venv" RENDER="$PP_RENDER"
       - name: Summarise
         if: ${{ !cancelled() }}
         run: python3 scripts/junit_summary.py results/gate2.xml "Gate 2 (live copy)" >> "$GITHUB_STEP_SUMMARY"
-      - name: Collect evidence
-        if: ${{ !cancelled() }}
-        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof evidence --render "$PP_RENDER" --out evidence'
-      - name: Destroy the live copy
-        if: always()
-        run: '"$RUNNER_TEMP/venv/bin/python" -m packetproof destroy --render "$PP_RENDER"'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:

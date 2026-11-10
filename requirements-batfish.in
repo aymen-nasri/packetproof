@@ -1,0 +1,3 @@
+# Gate 1 also needs the Batfish client (it pulls in pandas).
+-r requirements.in
+pybatfish==2026.9.17.3748

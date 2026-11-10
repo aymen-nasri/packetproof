@@ -130,6 +130,13 @@ def evidence(render_dir: Path, out: Path) -> None:
     for h in net.data["hosts"]:
         res = dexec(h["name"], "sh", "-c", "cat /tmp/pp-start.log; for f in /tmp/*.log; do echo \"== $f\"; tail -n 50 \"$f\"; done")
         (out / f"{h['name']}.txt").write_text(res.stdout + res.stderr)
+    # Packet captures the tests took (attack paths, spoofing, tunnel-only traffic) are evidence too.
+    pcaps = out / "pcaps"
+    for node in nodes(net):
+        listing = dexec(node, "sh", "-c", "ls /tmp/*.pcap 2>/dev/null || true").stdout.split()
+        for path in listing:
+            pcaps.mkdir(exist_ok=True)
+            run(["docker", "cp", f"{container(node)}:{path}", str(pcaps / f"{node}-{Path(path).name}")], check=False)
     # The runner host: AppArmor profiles attach by path and can confine binaries inside
     # privileged containers (this is what blocked `wg` from reading its key, see the docs).
     host = []
