@@ -75,7 +75,7 @@ sites:
 tunnel:
   prefix: 172.31.255.0/31
   port: 51820
-  mtu: 1420          # 1500 minus 80 bytes of WireGuard over IPv4/UDP overhead, with margin
+  mtu: 1420          # 1500 minus 80, WireGuard's overhead over IPv6 (60 over IPv4): the usual safe value
 
 hosts:
   - {name: client-a, zone: lan-a, address: 172.16.10.10, role: client}

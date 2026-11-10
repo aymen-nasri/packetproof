@@ -139,6 +139,9 @@ def topology(net: Network) -> str:
 
 def render(net: Network, out: Path) -> None:
     if out.exists():
+        # Only a previous render is replaced: `--out .` must never wipe a working tree.
+        if any(out.iterdir()) and not (out / "topo.clab.yml").exists():
+            raise SystemExit(f"{out} is not empty and is not a previous render: refusing to replace it")
         shutil.rmtree(out)
     (out / "batfish" / "configs").mkdir(parents=True)
     (out / "shared").mkdir()
