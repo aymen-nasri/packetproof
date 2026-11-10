@@ -50,11 +50,21 @@ def run(cmd: list[str], check: bool = False, timeout: int = 300) -> subprocess.C
 
 
 def fetch(out: Path, from_run: str | None = None, to_run: str | None = None) -> dict:
+    """The two newest bundles built on main whose commit also passed the pull-request gate after the
+    merge (Gate 2 on the merged code), or a chosen pair."""
     runs = json.loads(run(["gh", "run", "list", "-R", REPO, "-w", "bundle.yml", "-b", "main", "-s", "success",
                            "--json", "databaseId,headSha,createdAt", "-L", "50"], check=True).stdout)
+    gated = {r["headSha"] for r in json.loads(run(
+        ["gh", "run", "list", "-R", REPO, "-w", "pr-gate.yml", "-b", "main", "-e", "push", "-s", "success",
+         "--json", "headSha", "-L", "100"], check=True).stdout)}
+    if not (from_run and to_run):
+        runs = [r for r in runs if r["headSha"] in gated]
     if from_run and to_run:  # a chosen pair, e.g. to re-measure one change
         by_id = {str(r["databaseId"]): r for r in runs}
         runs = [by_id[to_run], by_id[from_run]]
+        ungated = [r["headSha"][:7] for r in runs if r["headSha"] not in gated]
+        if ungated:
+            raise SystemExit(f"no successful pull-request gate on main for {ungated}: not applying them")
     runs = runs[:2]
     if len(runs) < 2:
         raise SystemExit("need two successful bundle runs on main")

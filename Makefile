@@ -44,14 +44,15 @@ image-router:
 render:
 	$(PY) -m packetproof render $(if $(FAULT),--fault $(FAULT)) --out $(RENDER)
 
-# Byte-for-byte reproducible: sorted names, numeric root ownership, and every file stamped with the
+# Byte-for-byte reproducible: sorted names, one tar format, file modes that do not depend on the
+# builder's umask (a desktop's 002 would give 664/775), numeric root ownership, and every file stamped with the
 # commit's time (SOURCE_DATE_EPOCH), not 0, because NSD will not load a zone file whose mtime is 0
 # (prod run 42827614277). bundle.yml and release.yml both build with this target, and release.yml
 # requires the two results to be identical.
 bundle:
 	$(MAKE) --no-print-directory render RENDER=out/lab
 	git rev-parse HEAD > out/lab/COMMIT
-	tar --sort=name --mtime="@$$(git log -1 --format=%ct)" --owner=0 --group=0 --numeric-owner -C out -cf out/bundle.tar lab
+	tar --sort=name --format=gnu --mode=u=rwX,go=rX --mtime="@$$(git log -1 --format=%ct)" --owner=0 --group=0 --numeric-owner -C out -cf out/bundle.tar lab
 	gzip -n -c out/bundle.tar > $(BUNDLE)
 	rm -f out/bundle.tar
 
