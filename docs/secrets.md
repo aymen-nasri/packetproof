@@ -69,6 +69,17 @@ claim the check passed.
 Rotating only the age key does not protect secrets that were already readable with the old one:
 git history keeps the old ciphertext. That is why a leaked key means new identities too.
 
+## What went wrong the first time
+
+The first prod run with the managed identities
+([42878657349](https://github.com/aymen-nasri/packetproof/actions/runs/42878657349)) stopped at the
+decrypt step, before any lab was built: SOPS could not parse the age key ("unknown identity type").
+The bootstrap script had piped the key into `gh secret set`, and Windows PowerShell 5.1 sends piped
+text to a native program with a UTF-8 byte-order mark in front and a CRLF behind
+(`\xef\xbb\xbfAGE-SECRET-KEY-1...\r\n`). The key itself was intact. The script now hands the key to
+`gh` in a file written as plain ASCII, and prod strips a byte-order mark and CRs from the key before
+using it, so the stored secret did not have to be replaced.
+
 ## Limits
 
 - The plaintext exists for a few seconds on a GitHub-hosted runner. Anyone who controls that
