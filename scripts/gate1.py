@@ -30,6 +30,9 @@ ROUTER_IMAGE = "packetproof/router:dev"
 BROKEN_FRR = "frr version 10.7.1\nrouter bgp 65001\n neighbor 192.0.2.1 remote-as not-a-number\nthis is not a command\n"
 
 
+KEEP: Path | None = None
+
+
 def run(cmd: list[str], timeout: int = 300, **kw) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kw)
 
@@ -39,8 +42,27 @@ def conftest(conftest_bin: str, policy: str, data: Path) -> tuple[bool, list[str
     try:
         failures = [f["msg"] for r in json.loads(res.stdout) for f in (r.get("failures") or [])]
     except (json.JSONDecodeError, TypeError):
-        return False, [f"conftest error: {res.stdout[-500:]} {res.stderr[-500:]}"]
+        raise ToolError(f"conftest did not run: {res.stdout[-500:]} {res.stderr[-500:]}")
     return res.returncode == 0 and not failures, failures
+
+
+class ToolError(Exception):
+    """A check that could not run. Gate 1 still fails (a pull request must not pass on a broken
+    tool), but Gate 3 records it as "could not judge", never as a catch."""
+
+
+def check_policy_tests(conftest_bin: str) -> dict:
+    """The policies' own unit tests (policy/*/*_test.rego): a policy that cannot catch its known
+    holes would make every check above meaningless."""
+    details, ok = [], True
+    for policy in ("policy/intent", "policy/rendered"):
+        res = run([conftest_bin, "verify", "--no-color", "-p", str(ROOT / policy)])
+        if res.returncode != 0:
+            ok = False
+            details.append(f"{policy}: {(res.stdout + res.stderr).strip()[-400:]}")
+        else:
+            details.append(f"{policy}: {res.stdout.strip().splitlines()[-1] if res.stdout.strip() else 'passed'}")
+    return {"name": "policy-tests", "ok": ok, "details": details, "tool_error": not ok}
 
 
 def check_intent(conftest_bin: str, render: Path) -> dict:
@@ -66,6 +88,8 @@ def check_firewalls(conftest_bin: str, render: Path) -> dict:
             continue
         doc = {"router": router, "public_prefix": site["public_prefix"], "zone_ifaces": zone_ifaces,
                "nft": json.loads(res.stdout)}
+        if KEEP:  # the ruleset as nftables loaded it, kept as evidence next to gate1.json
+            (KEEP / f"nft-{router}.json").write_text(json.dumps(doc, indent=1) + "\n")
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
             json.dump(doc, f)
         good, msgs = conftest(conftest_bin, "policy/rendered", Path(f.name))
@@ -92,8 +116,8 @@ def check_vtysh(render: Path) -> dict:
         for p in t.iterdir():
             p.chmod(0o644)
         rejects_broken, selftest_out = _dryrun(t)
-    if rejects_broken:
-        return {"name": "vtysh-dryrun", "ok": False,
+    if rejects_broken:  # the variable holds "the broken config was accepted"
+        return {"name": "vtysh-dryrun", "ok": False, "tool_error": True,
                 "details": ["self-test failed: a deliberately broken config was accepted, so the check proves nothing",
                             selftest_out[-400:]]}
     details, ok = [], True
@@ -169,13 +193,21 @@ def main() -> int:
     a = ap.parse_args()
     a.render = a.render.resolve()  # docker -v needs absolute paths
 
-    checks = [check_intent(a.conftest, a.render), check_firewalls(a.conftest, a.render), check_vtysh(a.render)]
-    if not a.no_batfish:
+    global KEEP
+    KEEP = a.out.parent
+    KEEP.mkdir(parents=True, exist_ok=True)
+    checks = []
+    for name, fn in (("policy-tests", lambda: check_policy_tests(a.conftest)),
+                     ("conftest-intent", lambda: check_intent(a.conftest, a.render)),
+                     ("firewall-rendered", lambda: check_firewalls(a.conftest, a.render)),
+                     ("vtysh-dryrun", lambda: check_vtysh(a.render)),
+                     *([] if a.no_batfish else [("batfish", lambda: check_batfish(a.render, a.batfish_host))])):
         try:
-            checks.append(check_batfish(a.render, a.batfish_host))
-        except Exception as exc:  # a crash is a failed check, not a pass
-            checks.append({"name": "batfish", "ok": False, "details": [f"error: {exc}"]})
-    result = {"passed": all(c["ok"] for c in checks), "checks": checks}
+            checks.append(fn())
+        except Exception as exc:  # a crash fails Gate 1, and is marked as a tool error, not a catch
+            checks.append({"name": name, "ok": False, "tool_error": True, "details": [f"error: {exc}"]})
+    result = {"passed": all(c["ok"] for c in checks), "checks": checks,
+              "tool_errors": [c["name"] for c in checks if c.get("tool_error")]}
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps(result, indent=2) + "\n")
     lines = [f"### Gate 1 (static): {'passed' if result['passed'] else 'FAILED'}", "", "| Check | Result | Details |", "|---|---|---|"]
