@@ -180,3 +180,37 @@ def test_dmz_and_db_hosts_get_only_the_names_they_use(baseline):
         return [l for l in (baseline / "hosts" / h / "start.sh").read_text().splitlines() if "/etc/hosts" in l]
     assert hosts_lines("haproxy") == ["echo '172.16.50.10 ca.packetproof.example' >> /etc/hosts"]
     assert hosts_lines("ns1") == [] and hosts_lines("db") == []
+
+
+@pytest.mark.parametrize("change,where", [
+    (lambda d: d["pki"]["certificates"][0]["names"].append("x.example;touch$IFS/tmp/pwned"), "a SAN with shell syntax"),
+    (lambda d: d["dns"]["inside"].__setitem__("it's", "haproxy"), "a DNS label with a quote"),
+    (lambda d: d["flows"][0].__setitem__("any_port", True), "any_port next to a port list"),
+    (lambda d: d["sites"][0]["zones"][0].__setitem__("name", "production-a1"), "a zone name too long for its bridge"),
+    (lambda d: d["sites"][0]["zones"][1].__setitem__("gateway", "172.16.21.1"), "a gateway outside its zone"),
+    (lambda d: d["hosts"].append(dict(d["hosts"][0])), "a duplicate host name"),
+    (lambda d: d["monitoring"].__setitem__("host", "db"), "a monitoring host that is not the monitor"),
+])
+def test_unsafe_or_inconsistent_intent_is_rejected(change, where):
+    """Review of v1.0.0: free-form strings reached shell scripts, and some inconsistent intents
+    rendered a broken lab instead of failing."""
+    import jsonschema
+
+    data = copy.deepcopy(NETWORK)
+    change(data)
+    with pytest.raises((jsonschema.ValidationError, ValueError)):
+        Network(data)
+
+
+def test_render_refuses_to_replace_a_directory_that_is_not_a_render(tmp_path):
+    (tmp_path / "keep.txt").write_text("precious")
+    with pytest.raises(SystemExit):
+        render_lab.render(Network(copy.deepcopy(NETWORK)), tmp_path)
+    assert (tmp_path / "keep.txt").read_text() == "precious"
+
+
+def test_dns_probe_checks_the_answer(baseline):
+    """The monitor's DNS probe asks the name in the intent and requires the inside view's address,
+    so a stale record (fault F24) or an empty answer turns it red."""
+    bb = (baseline / "hosts" / "mon" / "blackbox.yml").read_text()
+    assert "query_name: www.packetproof.example" in bb and "172[.]16[.]20[.]10$" in bb

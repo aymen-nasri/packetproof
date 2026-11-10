@@ -109,7 +109,7 @@ def start_script(net: Network, host: dict) -> tuple[str, dict[str, str]]:
             "nohup python3 /usr/local/bin/pp-outside.py --ports 80,443,4444 >/tmp/outside.log 2>&1 &",
         ]
     elif role == "monitor":
-        files["blackbox.yml"] = BLACKBOX_YML
+        files["blackbox.yml"] = blackbox_yml(net)
         files["prometheus.yml"] = prometheus_yml(net)
         files.update(grafana_files())
         lines += [
@@ -300,15 +300,25 @@ modules:
       tls: true
       tls_config:
         ca_file: /shared/pki/root_ca.crt
-  dns_a:
-    prober: dns
-    timeout: 5s
-    dns:
-      transport_protocol: udp
-      query_name: www.packetproof.example
-      query_type: A
-      valid_rcodes: [NOERROR]
 """
+
+
+def blackbox_yml(net: Network) -> str:
+    """One DNS module per DNS probe: its own query, and an answer that must hold the address the
+    inside view gives that name (any NOERROR used to pass, even a stale or empty answer)."""
+    out = [BLACKBOX_YML.rstrip("\n")]
+    inside = inside_records(net)
+    for pr in net.data["monitoring"]["probes"]:
+        if pr["kind"] != "dns":
+            continue
+        want = inside.get(pr["query"])
+        out += [f"  dns_{pr['name']}:", "    prober: dns", "    timeout: 5s", "    dns:",
+                "      transport_protocol: udp", f"      query_name: {pr['query']}", "      query_type: A",
+                "      valid_rcodes: [NOERROR]"]
+        if want:
+            out += ["      validate_answer_rrs:", "        fail_if_none_matches_regexp:",
+                    f"          - '\\s{want.replace('.', '[.]')}$'"]
+    return "\n".join(out) + "\n"
 
 
 GRAFANA_INI = """\
@@ -396,7 +406,7 @@ def prometheus_yml(net: Network) -> str:
         jobs += [
             f"  - job_name: {pr['name']}",
             "    metrics_path: /probe",
-            f"    params: {{module: [{module[pr['kind']]}]}}",
+            f"    params: {{module: [{'dns_' + pr['name'] if pr['kind'] == 'dns' else module[pr['kind']]}]}}",
             "    static_configs:",
             f"      - targets: ['{pr['target']}']",
             "    relabel_configs:",
