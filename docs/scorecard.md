@@ -19,17 +19,23 @@ by the rules in [method.md](method.md), part 6. The newest run is published at
 | [42853952123](https://github.com/aymen-nasri/packetproof/actions/runs/42853952123) | [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 416 s (276 to 1038) |
 | [42856195978](https://github.com/aymen-nasri/packetproof/actions/runs/42856195978) | [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 416 s (271 to 1038) |
 | [42857438347](https://github.com/aymen-nasri/packetproof/actions/runs/42857438347) | [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 410 s (278 to 1052) |
+| [42873879465](https://github.com/aymen-nasri/packetproof/actions/runs/42873879465) | [00ba68c](https://github.com/aymen-nasri/packetproof/commit/00ba68c) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 446 s (295 to 1076) |
+| [42877631728](https://github.com/aymen-nasri/packetproof/actions/runs/42877631728) | [86b8f81](https://github.com/aymen-nasri/packetproof/commit/86b8f81) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 446 s (314 to 1080) |
 
 **The commits.**
 - [8fd0717](https://github.com/aymen-nasri/packetproof/commit/8fd0717), the first design: 4 runs, identical verdicts for every fault and both gates: yes.
 - [7e3c7bc](https://github.com/aymen-nasri/packetproof/commit/7e3c7bc), after the two fixes Gate 3 pointed at: RFC 8212's safety net set explicitly, and a path-MTU test that needs path-MTU discovery: 3 runs, identical verdicts for every fault and both gates: yes.
 - [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2), after moving FRR from the datacenter to the traditional profile, to avoid FRR bug #22939 that prod's drift check found: 3 runs, identical verdicts for every fault and both gates: yes.
+- [00ba68c](https://github.com/aymen-nasri/packetproof/commit/00ba68c), with two more Gate 2 tests: a TCP traceroute from site B across the tunnel, and the DB host's listening sockets: 1 run.
+- [86b8f81](https://github.com/aymen-nasri/packetproof/commit/86b8f81), with the outside test server limited to TLS 1.2 and newer: the lab code that v1.0.0 releases: 1 run.
 
 No fault is flaky under the method's rule. Between consecutive commits, the verdicts that moved:
 - 8fd0717 to 7e3c7bc: F06 (escaped to caught by gate 2); F11 (caught by gate 1 to caught by gate 1, Gate 2 now catches it too).
 - 7e3c7bc to 42970a2: none.
+- 42970a2 to 00ba68c: none.
+- 00ba68c to 86b8f81: none.
 
-## Every fault, on the current design (42970a2)
+## Every fault, on the current design (86b8f81)
 
 | ID | Layer | Fault | Gate 1 | Gate 2 | Verdict | On the first design | Predicted first gate |
 |---|---|---|---|---|---|---|---|

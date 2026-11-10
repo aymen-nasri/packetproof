@@ -18,7 +18,9 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
 > a tampered bundle was refused. The drift check then caught the apply tool itself, `frr-reload.py`,
 > changing two BGP settings nobody asked for: an FRR bug (FRRouting/frr#22939) that the datacenter
 > profile triggers. After moving to the traditional profile, an in-place apply leaves no drift and
-> the prod workflow is green ([prod.md](docs/prod.md)).
+> the prod workflow is green ([prod.md](docs/prod.md)). Prod now runs long-lived WireGuard keys and a
+> CA root decrypted from SOPS, and checks that it does: its latest change applied in 0.75 s with 0 of
+> 449 requests failed and 0 of 200 pings across the tunnel lost.
 >
 > Live scorecard: **https://aymen-nasri.github.io/packetproof/**
 
@@ -89,7 +91,9 @@ Trivy, given an SBOM and signed with cosign. Config bundles carry a GitHub artif
 cosign signature, and prod verifies both before applying anything. Each release is rebuilt from
 its tag, must match main's bundle byte for byte, and ships signed checksums and the images' signed
 SBOMs ([verify one yourself](docs/verify.md)). WireGuard private keys are
-generated inside each router and never leave it. SOPS with age is proved by a key-rotation test.
+generated inside each pull-request lab's routers and never leave them; prod's long-lived keys and
+CA root are SOPS-encrypted in Git, decrypted only by the `prod` environment, and checked in use on
+every prod run ([secrets](docs/secrets.md)). SOPS key rotation is proved by a separate test.
 [Threat model](docs/threat-model.md).
 
 ## Five diagnoses
@@ -133,6 +137,10 @@ Each of these was found by a check, fixed in a commit that says what it saw, and
   `ebgp-requires-policy`, which is why fault F06 first escaped ([limits.md](docs/limits.md)).
 - **An MTU mismatch is a black hole, not a bottleneck.** The first fix for Gate 2's path-MTU blind
   spot lowered one end of a link and silently dropped TLS ClientHellos.
+- **A pipe added a byte-order mark to a secret.** Windows PowerShell 5.1 prefixed the age key piped
+  into `gh secret set` with a UTF-8 BOM, and SOPS rejected it in prod. The next run's identity
+  check then failed on a file it could not read. Both were fixed and the third run proved the
+  identities ([prod.md](docs/prod.md#prod-with-long-lived-identities-from-sops)).
 - **Reproducible archives can break servers.** Bundles packed with mtime 0 deployed an NSD that
   never loaded its zone ([prod.md](docs/prod.md)).
 - **The apply tool drifted, because of an FRR bug.** Under the datacenter profile, `frr-reload.py

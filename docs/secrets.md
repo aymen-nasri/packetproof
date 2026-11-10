@@ -3,8 +3,10 @@
 **Status, 2026-11-10:** the age key exists (recipient
 `age1f804f0j6hh9kmgmxtsydfn025j7drsuy2s2ncvesuyh6ad834gxs6kqt5z`), and
 [secrets-bootstrap run 42876173273](https://github.com/aymen-nasri/packetproof/actions/runs/42876173273)
-created the identities now committed in `secrets/`. Whether prod runs them is shown by prod's step
-5c; the first such run is recorded in [prod.md](prod.md).
+created the identities now committed in `secrets/`. Prod run
+[42883900778](https://github.com/aymen-nasri/packetproof/actions/runs/42883900778) checked that prod runs them: both routers' own and peer WireGuard
+keys, the CA root's fingerprint, and the served certificate against the committed root all match
+([prod.md](prod.md#prod-with-long-lived-identities-from-sops)).
 
 PacketProof has two kinds of lab, and they treat secrets differently on purpose.
 
@@ -78,7 +80,9 @@ The bootstrap script had piped the key into `gh secret set`, and Windows PowerSh
 text to a native program with a UTF-8 byte-order mark in front and a CRLF behind
 (`\xef\xbb\xbfAGE-SECRET-KEY-1...\r\n`). The key itself was intact. The script now hands the key to
 `gh` in a file written as plain ASCII, and prod strips a byte-order mark and CRs from the key before
-using it, so the stored secret did not have to be replaced.
+using it, so the stored secret did not have to be replaced. The next run then showed a second bug,
+in the check rather than in prod: it read the CA root from the runner's disk, where the CA writes it
+with mode 0600. It now reads it inside the lab.
 
 ## Limits
 

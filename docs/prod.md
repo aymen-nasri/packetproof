@@ -67,3 +67,31 @@ applied the 42970a2 bundle in place on top of itself, the purest test of idempot
 
 The firewall-only measurement above was taken under the old profile; its FRR configs did not change,
 so the profile does not affect what it measured.
+
+## Prod with long-lived identities from SOPS
+
+Since PR #9, prod no longer runs throwaway identities. Both routers' WireGuard keys and the lab CA's
+root are decrypted from `secrets/prod.sops.yaml` with an age key that only the `prod` environment
+holds, and step 5c checks prod against the committed public halves ([secrets.md](secrets.md)). Steps
+4 and 5 also gained a ping across the tunnel, five a second, next to the two TCP probes.
+
+| Prod run | Bundles | Identities | Apply | Failed requests | Broken connections | Pings lost | Drift before / after | Gate 2 after |
+|---|---|---|---|---|---|---|---|---|
+| [42878657349](https://github.com/aymen-nasri/packetproof/actions/runs/42878657349) | verified, tampered refused | **not decrypted**: "unknown identity type" | not run | | | | | |
+| [42880852321](https://github.com/aymen-nasri/packetproof/actions/runs/42880852321) | verified, tampered refused | in use (from the evidence); the check itself crashed | 0.71 s | 0 of 450 | 0 | 0 of 200 | none / none | 123 of 123 |
+| [42883900778](https://github.com/aymen-nasri/packetproof/actions/runs/42883900778) | verified, tampered refused | **checked: all match** | 0.75 s | 0 of 449 | 0 | 0 of 200 | none / none | 123 of 123 |
+
+**What the check covers** (run 42883900778): each router's own WireGuard public key and its peer's
+key are the ones in `secrets/prod-public.yaml`; the lab CA's root has the committed fingerprint
+`d4deb1be...d572`; and the certificate HAProxy serves verifies against the committed root itself,
+not only against the lab's own copy. The bundles were 04c8e10 (rebuilt) and edff18b (applied).
+
+**What went wrong first, and the fixes:**
+
+- Run 42878657349 could not decrypt. The bootstrap script piped the age key into `gh secret set`, and
+  Windows PowerShell 5.1 sends piped text to a native program with a UTF-8 byte-order mark in front
+  and a CRLF behind. Fixed in PR #14: prod strips both, and the script now passes the key in a file.
+- Run 42880852321 ran with the managed identities (its evidence shows both WireGuard public keys
+  and step-ca's root fingerprint matching), but the identity check crashed: it read the root
+  certificate from the runner's disk, where the CA had written it as root with mode 0600. Fixed in
+  PR #15: the check reads it inside the lab, as clients do.
