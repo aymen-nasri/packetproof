@@ -24,6 +24,4 @@ runs:
     - name: Build the router and node images
       if: ${{ inputs.build-images == 'true' }}
       shell: bash
-      run: |
-        docker build -q -t packetproof/router:dev -t packetproof/router:w1 images/router
-        docker build -q -t packetproof/node:dev images/node
+      run: make images

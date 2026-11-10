@@ -1,10 +1,23 @@
-# Weekly pull requests when a pinned action has a new release. Each one runs the same checks as any
-# other change before it can merge, and the SHA stays pinned with the version in a comment.
-# The 7-day cooldown means a release is only proposed once it has been public for a week, which is
-# the window in which hijacked tags (as with trivy-action in March 2026) have so far been caught.
+# Weekly pull requests when a pinned dependency has a new release: Actions (pinned by commit SHA),
+# the base images (pinned by digest) and the hash-locked Python packages. Each one runs every
+# required check before it can merge. The 7-day cooldown means a release is only proposed once it
+# has been public for a week, which is the window in which hijacked tags (as with trivy-action in
+# March 2026) have so far been caught.
 version: 2
 updates:
   - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: docker
+    directories: [/images/router, /images/node]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: pip
     directory: /
     schedule:
       interval: weekly

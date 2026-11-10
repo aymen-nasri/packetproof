@@ -181,7 +181,11 @@ Baseline passed in this run: {cell(s['baseline_passed'])}.</p>
 <tr><th>Attack</th><th>Verdict</th><th>Detail</th></tr>
 {ap_rows}
 </table></div>
-<p class="muted">Every escape is listed with its reason in docs/scorecard.md. What each gate cannot see: docs/limits.md.</p>
+<p class="muted">Read next: <a href="https://github.com/aymen-nasri/packetproof/blob/main/docs/limits.md">what each gate cannot see, and why each escape changed no traffic</a> &middot;
+<a href="https://github.com/aymen-nasri/packetproof/blob/main/docs/scorecard.md">every Gate 3 run</a> &middot;
+<a href="https://github.com/aymen-nasri/packetproof/blob/main/docs/prod.md">the prod change path</a> &middot;
+<a href="https://github.com/aymen-nasri/packetproof/blob/main/docs/method.md">the method, committed before any result</a> &middot;
+<a href="https://github.com/aymen-nasri/packetproof">the repository</a></p>
 </body></html>
 """
 
