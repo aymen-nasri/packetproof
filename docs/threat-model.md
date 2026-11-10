@@ -29,18 +29,20 @@ the control works. Invariants (INV), attack paths (AP) and planted faults (F) ar
 
 | Threat | Control | Proved by |
 |---|---|---|
-| DMZ host scans or connects to the DB | zone firewall, DB reachable only from APP on 5432 (INV-01) | AP-01, AP-02; Conftest INV-01; F12 |
+| DMZ host scans or connects to the DB | zone firewall, DB reachable only from APP on 5432 (INV-01); the DB host listens on nothing else | AP-01, AP-02; Conftest INV-01; F12; `test_surface` (`ss`) |
+| A path around the zone firewall | no node joins containerlab's management network: every packet between zones crosses a router (fixed after the review of v1.0.0, where a DMZ host reached the DB that way) | `test_planes`: every host has only its planned address |
 | DMZ host moves laterally (SSH, user LANs, site B) | default-drop forward chain, exact allow list (INV-09, INV-12) | AP-03, AP-04, AP-08; F13, F14 |
 | Router takeover through management | SSH only from the admin host, on every router address (INV-02) | AP-05, AP-06, AP-07; F17 |
 | One zone pretends to be another | reverse-path check on every zone interface (INV-13) | AP-12 |
 | Forged private sources from the internet | stateless edge filter before conntrack (INV-08) | Gate 2 edge test; F16 |
 | Data leaves from the DMZ | no DMZ egress; DMZ gets no DNS (INV-04, INV-05) | AP-09, AP-10, AP-11; F19, F26 |
-| Data hidden in DNS names | the resolver refuses DMZ and DB; only it may query the internet | AP-10, AP-11 |
+| Data hidden in DNS names | two layers: the DMZ and DB have no DNS flow at all (firewall), and the resolver refuses them anyway; only the resolver may query the internet | AP-10, AP-11 prove the firewall layer. The resolver layer is checked only by Conftest (INV-05): with the firewall in place, no traffic test can reach it (F26 passes Gate 2, see [limits.md](limits.md)) |
 | Internal names leak | split-horizon DNS, outside view holds public names only (INV-11) | Gate 2 DNS tests; F25 |
 | Internal services exposed | only HTTPS and DNS are published (INV-03) | Gate 2 port scan from outside; F20, F23 |
 | Private routes leak to the ISP | prefix-lists on every eBGP session (INV-06) | Batfish, Gate 2 ISP table; F01 |
-| Site-to-site traffic in clear | private prefixes only over WireGuard (INV-07) | Gate 2 routing tests; F05 |
-| Rogue or expired certificates accepted | private CA, short-lived ACME certificates, clients verify (INV-10) | Gate 2 TLS refusals; F28, F29 |
+| Private routes accepted from the ISP (a hijack of a zone) | the ISP filter denies private space at every prefix length (`le 32`, fixed after the review of v1.0.0) | `test_planes`: no private route accepted from the ISP; a generator unit test |
+| Site-to-site traffic in clear | private prefixes only over WireGuard (INV-07); firewall rules for the other site are pinned to `wg0` | Conftest INV-07; Gate 2 routing tests and the traceroute; F05 (amended by A2: the original F05 could not bite) |
+| Rogue or expired certificates accepted | private CA, short-lived ACME certificates, clients verify (INV-10) | what HAProxy serves: `test_served_certificate` and `test_https_through_the_proxy` (F28, F29); that clients refuse a wrong name, an expired certificate and an untrusted issuer: the TLS refusal tests, against test servers |
 | A hijacked Action or moved tag | every Action pinned to a commit SHA, SHA pinning enforced by the repository, Dependabot with a 7-day cooldown | zizmor and OpenSSF Scorecard on every push |
 | Secrets committed to Git | Gitleaks over the whole history; pull-request labs generate WireGuard keys inside each router; prod's long-lived keys are in Git only as SOPS ciphertext | Gitleaks job; secrets-bootstrap.yml refuses to upload ciphertext that contains a plaintext key |
 | Prod runs an identity other than the managed one | public halves committed next to the ciphertext; the age key readable only by the `prod` environment (deployments from `main`) | prod.yml step 5c: both WireGuard keys, the CA root fingerprint, and the served certificate against the committed root |
