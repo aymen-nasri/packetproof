@@ -278,7 +278,9 @@ def identities(running: Path, public: Path) -> dict:
         peers = lab.dexec(r, "wg", "show", "wg0", "peers").stdout.split()
         peer_ok = sorted(peers) == sorted(k for n, k in keys.items() if n != r)
         wg[r] = {"own_key_matches": own == key, "peer_key_matches": peer_ok}
-    pem = (running / "shared" / "pki" / "root_ca.crt").read_text()
+    # Read it inside the lab, as every client does: the CA writes it as root with mode 0600, so the
+    # runner's user cannot read the bind-mounted copy (prod run 42880852321).
+    pem = lab.dexec("client-a", "cat", "/shared/pki/root_ca.crt").stdout
     fp = hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest()
     # The served certificate must chain to the committed root itself, not only to the lab's copy.
     net = lab.load(running)
