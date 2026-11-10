@@ -9,9 +9,9 @@ What it does:
   1. checks that gh is signed in and can see the repository's "prod" environment
   2. downloads age v1.3.2 for Windows from its GitHub release and checks the SHA-256
   3. generates an age key pair in a temporary file
-  4. stores the private key as the secret SOPS_AGE_KEY of the "prod" environment (piped straight
-     into `gh secret set`: never printed, never pasted, never on a command line); the environment
-     lets only jobs running from main read it
+  4. stores the private key as the secret SOPS_AGE_KEY of the "prod" environment (handed to
+     `gh secret set` in a temporary file: never printed, never pasted, never on a command line);
+     the environment lets only jobs running from main read it
   5. stores the public key as the Actions variable SOPS_AGE_RECIPIENT
   6. checks that the secret and the variable are really there, and prints OK or FAILED
 The temporary files, key included, are deleted at the end in every case.
@@ -23,6 +23,10 @@ identities, and the old ciphertext becomes useless (docs/secrets.md).
 Native tools (age-keygen, gh) report progress on stderr. Some PowerShell hosts (ISE, the VS Code
 console) turn any stderr line into a terminating error under $ErrorActionPreference = "Stop", so
 this script checks exit codes itself instead.
+
+Windows PowerShell 5.1 can also prefix a UTF-8 byte-order mark to text piped into a native program,
+which age then rejects ("unknown identity type"; prod run 42878657349). So the key goes to gh in a
+file written byte for byte, not through a pipe.
 #>
 $ErrorActionPreference = "Continue"
 $Repo = "aymen-nasri/packetproof"
@@ -62,9 +66,13 @@ try {
     if (-not $public.StartsWith("age1")) { Fail "could not read the public key" }
 
     Write-Host "4/6 storing the private key as the prod environment's secret SOPS_AGE_KEY"
-    # Only the AGE-SECRET-KEY line, piped: it never appears on screen or in a process list.
-    Get-Content $key | Where-Object { $_ -like "AGE-SECRET-KEY-*" } |
-        gh secret set SOPS_AGE_KEY --env prod --repo $Repo 2>&1 | Out-Null
+    # Only the AGE-SECRET-KEY line, in a dotenv file written as plain ASCII (no byte-order mark,
+    # no CR): it never appears on screen or in a process list, and gh reads it byte for byte.
+    $line = @(Get-Content $key | Where-Object { $_ -like "AGE-SECRET-KEY-*" })
+    if ($line.Count -ne 1) { Fail "expected one AGE-SECRET-KEY line in the key file" }
+    $envFile = Join-Path $work "secret.env"
+    [System.IO.File]::WriteAllText($envFile, "SOPS_AGE_KEY=$($line[0])`n", (New-Object System.Text.ASCIIEncoding))
+    gh secret set --env-file $envFile --env prod --repo $Repo 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail "gh secret set failed" }
 
     Write-Host "5/6 storing the public key as the variable SOPS_AGE_RECIPIENT"
