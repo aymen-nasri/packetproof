@@ -78,7 +78,10 @@ def start_script(net: Network, host: dict) -> tuple[str, dict[str, str]]:
     elif role == "dns-authoritative":
         files["nsd.conf"] = NSD_CONF.format(zone=dns["zone"])
         files[f"{dns['zone']}.zone"] = outside_zone(net)
-        lines += ["mkdir -p /var/lib/nsd /run/nsd", "nsd -c /pp/nsd.conf"]
+        lines += ["mkdir -p /var/lib/nsd /run/nsd", "nsd -c /pp/nsd.conf",
+                  # A server that started without its zone answers SERVFAIL; fail readiness instead.
+                  "i=0; until grep -q 'read with success' /tmp/nsd.log 2>/dev/null; do "
+                  "i=$((i+1)); [ $i -gt 40 ] && exit 1; sleep 0.25; done"]
     elif role == "ca":
         lines += ca_lines(net)
     elif role == "proxy":
