@@ -11,6 +11,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
 class H(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"  # keep-alive, so one TCP connection can be held across a change
+
     def do_GET(self):
         body = f"outside saw {self.client_address[0]}\n".encode()
         self.send_response(200)

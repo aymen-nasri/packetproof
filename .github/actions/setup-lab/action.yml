@@ -1,5 +1,9 @@
 name: setup-lab
 description: Record the runner, install containerlab with its checksum checked, and build the router and node images.
+inputs:
+  build-images:
+    description: Build the lab images from images/ (prod pulls the signed ones instead)
+    default: "true"
 runs:
   using: composite
   steps:
@@ -18,6 +22,7 @@ runs:
         sudo apt-get install -y -qq "$RUNNER_TEMP/clab.deb" > /dev/null
         containerlab version
     - name: Build the router and node images
+      if: ${{ inputs.build-images == 'true' }}
       shell: bash
       run: |
         docker build -q -t packetproof/router:dev -t packetproof/router:w1 images/router

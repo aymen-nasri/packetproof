@@ -10,6 +10,8 @@ BIG = b"x" * (1024 * 1024)
 
 def handler(name: str):
     class H(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
         def do_GET(self):
             if self.path == "/health":
                 body = b"ok\n"
