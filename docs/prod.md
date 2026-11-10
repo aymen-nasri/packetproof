@@ -84,7 +84,8 @@ holds, and step 5c checks prod against the committed public halves ([secrets.md]
 **What the check covers** (run 42883900778): each router's own WireGuard public key and its peer's
 key are the ones in `secrets/prod-public.yaml`; the lab CA's root has the committed fingerprint
 `d4deb1be...d572`; and the certificate HAProxy serves verifies against the committed root itself,
-not only against the lab's own copy. The bundles were 04c8e10 (rebuilt) and edff18b (applied).
+not only against the lab's own copy. The bundles were 04c8e10 (rebuilt) and edff18b (applied),
+whose router configs are identical: like 42854055534, these runs re-applied the same configs.
 
 **What went wrong first, and the fixes:**
 
@@ -95,3 +96,24 @@ not only against the lab's own copy. The bundles were 04c8e10 (rebuilt) and edff
   and step-ca's root fingerprint matching), but the identity check crashed: it read the root
   certificate from the runner's disk, where the CA had written it as root with mode 0600. Fixed in
   PR #15: the check reads it inside the lab, as clients do.
+
+## After the review of v1.0.0: a stricter prod, on the fixed design
+
+The review of v1.0.0 ([review-v1.0.0.md](review-v1.0.0.md)) found that the drift check reloaded
+rtr-a's ruleset before comparing it, so nftables drift on rtr-a could not be seen, and that a green
+run did not require a hitless change. Since PR #21, prod compares first and then plants and removes
+exactly its self-test's two lines; a run is green only if the change was hitless; deploy must
+report *ready* (keys exchanged, both BGP sessions of each site router up, every node ready); and the
+probes count every real TCP connection.
+
+Prod run [42902885547](https://github.com/aymen-nasri/packetproof/actions/runs/42902885547) applied bundle 3fb6f3f onto a lab built from the same
+bundle (the design changed host networking, which an in-place apply cannot change, so the two
+bundles have to share it). FRR had nothing to change, and each router's ruleset was flushed and
+reloaded in one `nft -f` transaction. So this run proves a hitless, drift-free apply on the new
+design, not a change: the last change between different router configs was measured on v1.0.0's
+design (runs 42836367491 and 42838516660, above).
+
+| Deploy | Bundles verified, tampered refused | Apply | Failed requests | Broken connections | Pings lost | Drift before / after | Self-test | Identities | Gate 2 after |
+|---|---|---|---|---|---|---|---|---|---|
+| ready | yes; the tampered copy differed and was refused for both reasons | 0.95 s | 0 of 449 | 0 (1 connection per probe) | 0 of 200 | none / none | planted drift seen in FRR and nftables, then removed | all match | 137 of 137 |
+

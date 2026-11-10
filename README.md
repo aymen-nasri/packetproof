@@ -6,21 +6,28 @@ PacketProof is a small two-site company network written as code, and a pipeline 
 merge a change until a disposable copy of the whole network has proved it. Then it grades its own
 gates against 30 deliberately broken changes and 12 attack paths, and publishes what they missed.
 
-> **Scorecard (Gate 3 on the current design):** of 30 planted faults, the static gate caught 19,
+> **Scorecard (Gate 3 on v1.1.0's code, three runs with identical verdicts: [42902266017](https://github.com/aymen-nasri/packetproof/actions/runs/42902266017),
+> [42902610699](https://github.com/aymen-nasri/packetproof/actions/runs/42902610699), [42907526683](https://github.com/aymen-nasri/packetproof/actions/runs/42907526683)):** of 30 planted faults, the static gate caught 19,
 > the live copy caught 8 more, and 3 escaped both. All three escapes are latent: another control or
 > the protocol masked them, and no traffic changed ([why, one by one](docs/limits.md#the-three-escapes-that-remain-and-why-each-changed-no-traffic)).
-> All 12 attack paths from a compromised DMZ host were blocked while their legitimate flows passed.
-> The first design had 4 escapes in 4 identical runs; one of them exposed a disabled FRR safety
-> net, which was fixed, and the fault was then caught ([scorecard.md](docs/scorecard.md)).
+> All 12 attack paths from a compromised DMZ host were blocked while their legitimate flows passed,
+> and every probe proved it ran. (In v1.0.0, three of the 12 [proved nothing](docs/review-v1.0.0.md).)
+> The first design had 4 escapes in 4 identical runs (for example [42717245768](https://github.com/aymen-nasri/packetproof/actions/runs/42717245768)); one
+> of them exposed a disabled FRR safety net, which was fixed, and the fault was then caught. Every
+> one of the 15 runs is listed in [scorecard.md](docs/scorecard.md).
 >
 > **Prod:** a firewall-only change applied in place in about one second with no failed requests and
-> no broken TCP connections (two runs), after both images and both config bundles were verified and
-> a tampered bundle was refused. The drift check then caught the apply tool itself, `frr-reload.py`,
+> no broken TCP connections (runs [42836367491](https://github.com/aymen-nasri/packetproof/actions/runs/42836367491) and [42838516660](https://github.com/aymen-nasri/packetproof/actions/runs/42838516660)),
+> after both images and both config bundles were verified and a tampered bundle was refused. The drift check then caught the apply tool itself, `frr-reload.py`,
 > changing two BGP settings nobody asked for: an FRR bug (FRRouting/frr#22939) that the datacenter
-> profile triggers. After moving to the traditional profile, an in-place apply leaves no drift and
-> the prod workflow is green ([prod.md](docs/prod.md)). Prod now runs long-lived WireGuard keys and a
-> CA root decrypted from SOPS, and checks that it does: its latest change applied in 0.75 s with 0 of
-> 449 requests failed and 0 of 200 pings across the tunnel lost.
+> profile triggers. After moving to the traditional profile, an in-place apply leaves no drift
+> ([42854055534](https://github.com/aymen-nasri/packetproof/actions/runs/42854055534)). Prod now runs long-lived WireGuard keys and a CA root decrypted
+> from SOPS, and checks that it does. The prod runs since then re-applied unchanged router configs,
+> which proves an apply is hitless and leaves no drift, not that a change is: on v1.1.0's code,
+> every router's ruleset was replaced in one transaction and the apply took 0.95 s, with 0 of 449
+> requests failed, 0 connections broken and 0 of 200 pings across the tunnel lost; the drift check
+> found none, then proved it can see drift by planting and removing a change of its own ([42902885547](https://github.com/aymen-nasri/packetproof/actions/runs/42902885547); all prod runs in
+> [prod.md](docs/prod.md)).
 >
 > Live scorecard: **https://aymen-nasri.github.io/packetproof/**
 
@@ -31,10 +38,10 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
                           |  pull request
    +----------------------+----------------------+--------------------------------+
    | Gate 1: static        | Gate 2: live copy     | Gate 3: graded suite (nightly) |
-   | about 1 minute        | about 6 minutes       | about 22 minutes, 20 runners   |
+   | about 1 minute        | about 4 minutes       | about 32 minutes, 20 runners   |
    | schema, Conftest on   | the whole network in  | each of 30 planted faults      |
    | intent and on loaded  | containerlab on the   | through Gates 1 and 2, next to |
-   | nftables, vtysh,      | runner; 123 tests of  | an unfaulted baseline; 12      |
+   | nftables, vtysh,      | runner; 137 tests of  | an unfaulted baseline; 12      |
    | Batfish; the plan     | routing, firewall,    | attack paths; scorecard to     |
    | (frr-reload --test)   | NAT, DNS, TLS, MTU,   | GitHub Pages                   |
    | posted on the PR      | proxy, monitoring     |                                |
@@ -46,6 +53,15 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
            previous bundle -> apply the new one in place while probes count failures
            -> drift check -> Gate 2 again
 ```
+
+Times are from successful runs on free runners. Over the 5 pull-request gate runs with v1.1.0's
+tests ([42899324990](https://github.com/aymen-nasri/packetproof/actions/runs/42899324990) to [42902138355](https://github.com/aymen-nasri/packetproof/actions/runs/42902138355)), the medians are Gate 1 1.0 min, Gate 2
+4.0 min, and the whole gate 4.1 min (3.9 to 4.4). Gate 2 took 6.5 min in v1.0.0, mostly because
+three nmap scans waited out their host timeouts. Gate 3 took 31.7 min in the first of the three runs
+above. It ends with its slowest fault: F15 drops all return traffic, so every probe in its job
+waits out its timeout, and the job takes 31 minutes. The other two runs, started while the first
+ran, waited for free runners and took 61 and 62 min. The runs are listed under the [pr-gate](https://github.com/aymen-nasri/packetproof/actions/workflows/pr-gate.yml) and
+[gate3](https://github.com/aymen-nasri/packetproof/actions/workflows/gate3.yml) workflows.
 
 ## The network
 
@@ -78,8 +94,10 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
   hand, never generated from `network.yaml`, so a wrong intent cannot pass both.
 - **Every attack has a legitimate twin.** An attack counts as blocked only if a flow that must work
   passes in the same run. A firewall that blocks everything does not pass.
-- **Probes must prove they ran.** A probe that cannot run raises an error instead of reporting
-  "blocked".
+- **Probes must prove they ran.** A probe that cannot run, a scan that does not finish, or a
+  capture that never started raises an error instead of reporting "blocked".
+- **A gate that could not judge is not a catch.** If a tool or the runner fails in a fault's job,
+  the fault is void and re-run ([amendment A2](docs/method.md)).
 - **Escapes are published**, with the evidence for why ([limits.md](docs/limits.md)).
 
 ## Securing the pipeline itself
@@ -94,6 +112,7 @@ SBOMs ([verify one yourself](docs/verify.md)). WireGuard private keys are
 generated inside each pull-request lab's routers and never leave them; prod's long-lived keys and
 CA root are SOPS-encrypted in Git, decrypted only by the `prod` environment, and checked in use on
 every prod run ([secrets](docs/secrets.md)). SOPS key rotation is proved by a separate test.
+Release tags are protected by a ruleset, and releases are immutable once published.
 [Threat model](docs/threat-model.md).
 
 ## Five diagnoses
@@ -149,9 +168,30 @@ Each of these was found by a check, fixed in a commit that says what it saw, and
   release yet. Moving to the traditional profile avoids it, and an in-place apply now leaves no
   drift ([prod.md](docs/prod.md#what-the-drift-check-found-an-frr-bug-now-avoided)).
 
+## What a review of v1.0.0 found
+
+After v1.0.0, the code was reviewed in four independent parts, and every finding was checked before
+it was fixed. Four of them change what v1.0.0 could claim, and v1.1.0 fixes all four
+([the full account](docs/review-v1.0.0.md)):
+
+- **Every container also sat on containerlab's management network**, a path around the zone
+  firewall: a "compromised" DMZ host reached the database there, port 5432 open. The attack paths
+  never tried it, because they target only the address plan.
+- **The ISP filter matched private space only at the exact /8, /12 and /16**, so both routers
+  accepted a more specific private route from the ISP.
+- **Three of v1.0.0's 12 attack paths proved nothing**: their nmap scans timed out on every host
+  and reported no ports at all. v1.0.0's "12 of 12 blocked" was 9 proved and 3 vacuous.
+- **The prod drift check could not see firewall drift on rtr-a**: its self-test reloaded the
+  ruleset just before looking.
+
+The first three were shown by a run before they were fixed, the fourth by reading the code. Gate 2
+now has a test for each of the first three, and prod now compares before its self-test touches
+anything.
+
 ## Documents
 
 - [Why this project, and why this design](docs/why.md), with sources
+- [What a review of v1.0.0 found](docs/review-v1.0.0.md), and what it changed
 - [Method](docs/method.md): the rules, faults, attack paths and invariants, committed before any test
 - [Week 1](docs/go-no-go.md): go/no-go checks, with every run linked, including the failures
 - [Scorecard](docs/scorecard.md): every Gate 3 run and how each fault was graded
