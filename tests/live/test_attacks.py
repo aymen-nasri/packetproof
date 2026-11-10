@@ -36,6 +36,7 @@ def _scan_from_dmz(lab, target: str) -> list[str]:
 
 def test_ap01_scan_db_zone(lab):
     assert lab.tcp("app1", DB, 5432) == "open", "legitimate pair failed: app1 -> db:5432"
+    _dmz_probe_works(lab)
     found = _scan_from_dmz(lab, "172.16.40.0/28")
     assert not found, f"open ports in the DB zone seen from the DMZ: {found}"
 
@@ -57,6 +58,7 @@ def test_ap03_lateral_ssh_to_app(lab):
 def test_ap04_scan_lan_a(lab):
     ok = lab.curl("client-a", "https://www.packetproof.example/", "-f")
     assert _https_ok(ok), f"legitimate pair failed: client-a HTTPS: {ok.stdout[:100]} {ok.stderr}"
+    _dmz_probe_works(lab)
     found = _scan_from_dmz(lab, "172.16.10.0/27")
     assert not found, f"open ports in LAN-A seen from the DMZ: {found}"
 
@@ -85,6 +87,7 @@ def test_ap07_ssh_to_rtr_b_across_tunnel(lab):
 def test_ap08_scan_lan_b_across_tunnel(lab):
     ok = lab.curl("client-b", "https://www.packetproof.example/", "-f")
     assert _https_ok(ok), f"legitimate pair failed: client-b HTTPS across the tunnel: {ok.stdout[:100]} {ok.stderr}"
+    _dmz_probe_works(lab)
     found = _scan_from_dmz(lab, "172.24.10.0/28")
     assert not found, f"open ports in LAN-B seen from the DMZ: {found}"
 

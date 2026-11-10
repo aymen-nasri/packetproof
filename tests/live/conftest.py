@@ -59,7 +59,11 @@ class Lab:
         return self._probe(self.dmz(f"pp-probe.py tcp {ip} {port} --timeout {timeout}"), f"dmz->{ip}:{port}")
 
     def nmap_from_dmz(self, target: str) -> str:
-        res = self.dmz(f"nmap -Pn -sT -n -T4 --max-retries 1 --host-timeout 60s --top-ports 100 {target}", timeout=180)
+        # A zone of dropped ports answers nothing, so nmap's congestion control never speeds up and
+        # every host used to hit the 60 s host timeout before a single port was reported (seen in
+        # PR #19's first run: v1.0.0's scans finished no host). --min-rate keeps probes flowing.
+        res = self.dmz(f"nmap -Pn -sT -n -T4 --top-ports 100 --min-rate 1000 --max-retries 1 "
+                       f"--max-rtt-timeout 400ms --host-timeout 150s {target}", timeout=300)
         if "Nmap done" not in res.stdout:
             raise RuntimeError(f"nmap from the DMZ did not run: {res.stdout[-300:]!r} {res.stderr[-300:]!r}")
         if "host timeout" in res.stdout:  # a timed-out host prints no port table: not "nothing open"
