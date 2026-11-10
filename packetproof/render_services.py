@@ -43,6 +43,10 @@ def _prelude(net: Network, host: dict) -> list[str]:
         "ip link set eth1 up",
         f"ip route replace default via {_gateway(net, zone)} dev eth1",
     ]
+    if host["role"] == "outside" and net.data["isp"]["outside"].get("mtu", 1500) < 1500:
+        # Like a client behind a tunnel that does not clamp its MSS: it advertises 1460 bytes on a
+        # smaller line, so servers must rely on path-MTU discovery (ICMP "fragmentation needed").
+        lines[-1] += " advmss 1460"
     resolver = next(h for h in net.data["hosts"] if h["role"] == "dns-resolver")
     if zone in ("dmz", "db", "outside"):
         # DMZ and DB hosts get no DNS (INV-05, INV-12): the names they need come from a static
@@ -78,7 +82,10 @@ def start_script(net: Network, host: dict) -> tuple[str, dict[str, str]]:
     elif role == "dns-authoritative":
         files["nsd.conf"] = NSD_CONF.format(zone=dns["zone"])
         files[f"{dns['zone']}.zone"] = outside_zone(net)
-        lines += ["mkdir -p /var/lib/nsd /run/nsd", "nsd -c /pp/nsd.conf"]
+        lines += ["mkdir -p /var/lib/nsd /run/nsd", "nsd -c /pp/nsd.conf",
+                  # A server that started without its zone answers SERVFAIL; fail readiness instead.
+                  "i=0; until grep -q 'read with success' /tmp/nsd.log 2>/dev/null; do "
+                  "i=$((i+1)); [ $i -gt 40 ] && exit 1; sleep 0.25; done"]
     elif role == "ca":
         lines += ca_lines(net)
     elif role == "proxy":

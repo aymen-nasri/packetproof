@@ -28,18 +28,29 @@ def frr_reload_test(router: str, base: Path, new: Path) -> str:
     name = f"pp-diff-{router}"
     run(["docker", "rm", "-f", name])
     d = base / "routers" / router
-    run(["docker", "run", "-d", "--name", name, "--network", "none",
+    # Privileged like the lab's routers: zebra cannot start, and the config never loads, without it.
+    run(["docker", "run", "-d", "--name", name, "--hostname", router, "--network", "none", "--privileged",
          "-v", f"{d / 'frr.conf'}:/etc/frr/frr.conf", "-v", f"{d / 'daemons'}:/etc/frr/daemons",
          "-v", f"{d / 'vtysh.conf'}:/etc/frr/vtysh.conf", ROUTER_IMAGE])
     try:
-        for _ in range(30):
-            if run(["docker", "exec", name, "vtysh", "-c", "show running-config"]).returncode == 0:
+        # vtysh answers before the daemons have read frr.conf; a plan taken then compares against
+        # an empty router and lists the whole config (the plans on PRs #2 to #4 did). Wait until
+        # the base config is really loaded.
+        loaded = False
+        for _ in range(60):
+            out = run(["docker", "exec", name, "vtysh", "-c", "show running-config"]).stdout
+            if "router bgp" in out:
+                loaded = True
                 break
             time.sleep(1)
+        if not loaded:
+            return "the base config did not load in 60 s, so no plan; plain diff instead:\n" + plain_diff(
+                d / "frr.conf", new / "routers" / router / "frr.conf")
         run(["docker", "cp", str(new / "routers" / router / "frr.conf"), f"{name}:/tmp/new.conf"])
         res = run(["docker", "exec", name, "/usr/lib/frr/frr-reload.py", "--test", "/tmp/new.conf"])
-        out = (res.stdout + res.stderr).strip()
+        out = res.stdout.strip()  # the plan; frr-reload's INFO logging goes to stderr
         if res.returncode != 0 and "Lines To" not in out:
+            out = (res.stdout + res.stderr).strip()
             return f"frr-reload.py --test failed (rc {res.returncode}); plain diff instead:\n" + plain_diff(
                 d / "frr.conf", new / "routers" / router / "frr.conf")
         return out
