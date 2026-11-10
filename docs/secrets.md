@@ -64,7 +64,7 @@ claim the check passed.
 
 | What | How | Proof |
 |---|---|---|
-| The age key (who can decrypt) | `sops updatekeys` or re-encrypt to a new recipient, then delete the old key | `secrets.yml`: a rotation test with throwaway keys shows the new key decrypts, the old key no longer does, and the values did not change |
+| The age key (who can decrypt) | `sops rotate --in-place --add-age <new> --rm-age <old> secrets/prod.sops.yaml` (the command the rotation test runs), then update `SOPS_AGE_RECIPIENT` and the secret, and delete the old key | `secrets.yml`: a rotation test with throwaway keys shows the new key decrypts, the old key no longer does, and the values did not change |
 | The identities themselves | run `secrets-bootstrap.yml`, commit its ciphertext and public file in a pull request | the next prod run's step 5c checks the new keys and root |
 | A leaked age key | run `bootstrap-sops-key.ps1` again, then `secrets-bootstrap.yml`: new key **and** new identities, because whoever held the old key could decrypt the old ciphertext from git history | as above |
 
