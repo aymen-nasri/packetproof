@@ -18,6 +18,7 @@ RESULTS  ?= results
 EVIDENCE ?= evidence
 CONFTEST ?= conftest
 FAULT    ?=
+SECRETS  ?=
 
 .PHONY: help venv venv-batfish images image-router render unit gate1 deploy gate2 evidence destroy test lock
 
@@ -48,7 +49,7 @@ gate1: render
 	$(PY) scripts/gate1.py --render $(RENDER) --out $(RESULTS)/gate1.json --conftest $(CONFTEST)
 
 deploy:
-	$(PY) -m packetproof deploy --render $(RENDER)
+	$(PY) -m packetproof deploy --render $(RENDER) $(if $(SECRETS),--secrets $(SECRETS))
 
 gate2:
 	PP_RENDER=$(RENDER) $(PY) -m pytest tests/live -v -p no:cacheprovider --junitxml $(RESULTS)/gate2.xml
