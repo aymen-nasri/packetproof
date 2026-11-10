@@ -6,21 +6,23 @@ PacketProof is a small two-site company network written as code, and a pipeline 
 merge a change until a disposable copy of the whole network has proved it. Then it grades its own
 gates against 30 deliberately broken changes and 12 attack paths, and publishes what they missed.
 
-> **Scorecard (Gate 3 on the current design):** of 30 planted faults, the static gate caught 19,
+> **Scorecard ([Gate 3 run 42877631728](https://github.com/aymen-nasri/packetproof/actions/runs/42877631728), on the released code):** of 30 planted faults, the static gate caught 19,
 > the live copy caught 8 more, and 3 escaped both. All three escapes are latent: another control or
 > the protocol masked them, and no traffic changed ([why, one by one](docs/limits.md#the-three-escapes-that-remain-and-why-each-changed-no-traffic)).
 > All 12 attack paths from a compromised DMZ host were blocked while their legitimate flows passed.
-> The first design had 4 escapes in 4 identical runs; one of them exposed a disabled FRR safety
-> net, which was fixed, and the fault was then caught ([scorecard.md](docs/scorecard.md)).
+> The first design had 4 escapes in 4 identical runs (for example [42717245768](https://github.com/aymen-nasri/packetproof/actions/runs/42717245768)); one
+> of them exposed a disabled FRR safety net, which was fixed, and the fault was then caught. Every
+> one of the 12 runs is listed in [scorecard.md](docs/scorecard.md).
 >
 > **Prod:** a firewall-only change applied in place in about one second with no failed requests and
-> no broken TCP connections (two runs), after both images and both config bundles were verified and
-> a tampered bundle was refused. The drift check then caught the apply tool itself, `frr-reload.py`,
+> no broken TCP connections (runs [42836367491](https://github.com/aymen-nasri/packetproof/actions/runs/42836367491) and [42838516660](https://github.com/aymen-nasri/packetproof/actions/runs/42838516660)),
+> after both images and both config bundles were verified and a tampered bundle was refused. The drift check then caught the apply tool itself, `frr-reload.py`,
 > changing two BGP settings nobody asked for: an FRR bug (FRRouting/frr#22939) that the datacenter
-> profile triggers. After moving to the traditional profile, an in-place apply leaves no drift and
-> the prod workflow is green ([prod.md](docs/prod.md)). Prod now runs long-lived WireGuard keys and a
-> CA root decrypted from SOPS, and checks that it does: its latest change applied in 0.75 s with 0 of
-> 449 requests failed and 0 of 200 pings across the tunnel lost.
+> profile triggers. After moving to the traditional profile, an in-place apply leaves no drift
+> ([42854055534](https://github.com/aymen-nasri/packetproof/actions/runs/42854055534)). Prod now runs long-lived WireGuard keys and a CA root decrypted
+> from SOPS, and checks that it does: its latest change applied in 0.75 s with 0 of 449 requests
+> failed and 0 of 200 pings across the tunnel lost ([42883900778](https://github.com/aymen-nasri/packetproof/actions/runs/42883900778); all prod runs in
+> [prod.md](docs/prod.md)).
 >
 > Live scorecard: **https://aymen-nasri.github.io/packetproof/**
 
@@ -31,7 +33,7 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
                           |  pull request
    +----------------------+----------------------+--------------------------------+
    | Gate 1: static        | Gate 2: live copy     | Gate 3: graded suite (nightly) |
-   | about 1 minute        | about 6 minutes       | about 22 minutes, 20 runners   |
+   | about 1 minute        | about 6.5 minutes     | about 21 minutes, 20 runners   |
    | schema, Conftest on   | the whole network in  | each of 30 planted faults      |
    | intent and on loaded  | containerlab on the   | through Gates 1 and 2, next to |
    | nftables, vtysh,      | runner; 123 tests of  | an unfaulted baseline; 12      |
@@ -46,6 +48,11 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
            previous bundle -> apply the new one in place while probes count failures
            -> drift check -> Gate 2 again
 ```
+
+Times are medians of successful runs on free runners: Gate 1 0.9 min and Gate 2 6.5 min over 22
+pull-request runs, the whole pull-request gate 7.0 min over 21, and Gate 3 21.4 min over 12 runs
+(19.9 to 40.0). The runs are listed under the [pr-gate](https://github.com/aymen-nasri/packetproof/actions/workflows/pr-gate.yml) and
+[gate3](https://github.com/aymen-nasri/packetproof/actions/workflows/gate3.yml) workflows.
 
 ## The network
 
