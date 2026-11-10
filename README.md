@@ -16,7 +16,9 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
 > **Prod:** a firewall-only change applied in place in about one second with no failed requests and
 > no broken TCP connections (two runs), after both images and both config bundles were verified and
 > a tampered bundle was refused. The drift check then caught the apply tool itself, `frr-reload.py`,
-> changing two BGP settings nobody asked for ([prod.md](docs/prod.md)).
+> changing two BGP settings nobody asked for: an FRR bug (FRRouting/frr#22939) that the datacenter
+> profile triggers. After moving to the traditional profile, an in-place apply leaves no drift and
+> the prod workflow is green ([prod.md](docs/prod.md)).
 >
 > Live scorecard: **https://aymen-nasri.github.io/packetproof/**
 
@@ -131,8 +133,11 @@ Each of these was found by a check, fixed in a commit that says what it saw, and
   spot lowered one end of a link and silently dropped TLS ClientHellos.
 - **Reproducible archives can break servers.** Bundles packed with mtime 0 deployed an NSD that
   never loaded its zone ([prod.md](docs/prod.md)).
-- **The apply tool drifts.** `frr-reload.py --reload` of an unchanged config toggles two BGP
-  defaults under the datacenter profile; the drift check caught it ([prod.md](docs/prod.md)).
+- **The apply tool drifted, because of an FRR bug.** Under the datacenter profile, `frr-reload.py
+  --reload` of an unchanged config switched off `bgp deterministic-med`. The drift check caught it;
+  the cause is FRRouting/frr#22939 (an enum value used as a flag mask), fixed upstream but in no
+  release yet. Moving to the traditional profile avoids it, and an in-place apply now leaves no
+  drift ([prod.md](docs/prod.md#what-the-drift-check-found-an-frr-bug-now-avoided)).
 
 ## Documents
 

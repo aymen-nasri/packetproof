@@ -26,7 +26,7 @@ a CI run, a planted fault or a week-1 result; run numbers are in [scorecard.md](
 
 | Fault | What went wrong | Fixed in | After the fix |
 |---|---|---|---|
-| F06: inbound route-map removed on rtr-a | Escaped both gates. FRR's RFC 8212 safety net, `bgp ebgp-requires-policy`, defaults to off under the `frr defaults datacenter` profile the generator uses (FRR 10.7.1, `bgpd/bgp_vty.c`), so rtr-a accepted rtr-b's routes with no policy at all. Batfish agreed with the live network | [b0e2b20](https://github.com/aymen-nasri/packetproof/commit/b0e2b20): the safety net is set explicitly | Escaped, then caught by Gate 2 after b0e2b20: with no inbound policy rtr-a now accepts nothing, and site B becomes unreachable |
+| F06: inbound route-map removed on rtr-a | Escaped both gates. FRR's RFC 8212 safety net, `bgp ebgp-requires-policy`, defaults to off under the `frr defaults datacenter` profile the generator uses (FRR 10.7.1, `bgpd/bgp_vty.c`), so rtr-a accepted rtr-b's routes with no policy at all. Batfish agreed with the live network | [b0e2b20](https://github.com/aymen-nasri/packetproof/commit/b0e2b20): the safety net set explicitly; since [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) it is the default of the traditional profile | Escaped, then caught by Gate 2 after b0e2b20: with no inbound policy rtr-a now accepts nothing, and site B becomes unreachable |
 | F11: ICMP "fragmentation needed" dropped | Gate 1 caught it, but Gate 2's path-MTU test could not: the 1,400-byte line was the outside host's own, so its TCP MSS kept packets small and path-MTU discovery never ran | [9bd8588](https://github.com/aymen-nasri/packetproof/commit/9bd8588): the outside host advertises a 1460-byte MSS on its 1400-byte line, and a test checks haproxy learned the 1400-byte path | Caught by both gates |
 
 The first attempt at the F11 fix ([b0e2b20](https://github.com/aymen-nasri/packetproof/commit/b0e2b20))
@@ -55,13 +55,14 @@ after seeing them escape would flatter the score, so they are left as escapes.
 | Failed requests and broken connections on two held TCP connections during an apply | Anything the two probes do not cross; loss shorter than one 0.2 s probe interval | prod runs, step 4 |
 | Drift in FRR (against a fresh FRR started from the same file) and in nftables | Host services: the in-place apply covers router FRR and nftables only; DNS, CA and proxy changes need a rebuild | prod runs, steps 3b and 5a |
 
-**What the drift check found:** `frr-reload.py --reload` is not idempotent under `frr defaults
-datacenter`. Applying a bundle whose FRR configs were unchanged left all three routers running with
-`no bgp deterministic-med` and without `use-underlays-nexthop-weight`, which the bundle never asked
-for. The routers matched a fresh FRR exactly before the apply, so the apply tool caused it. Neither
-setting changes traffic in this topology, but it is configuration nobody chose, and prod reports it
-as drift. Moving off the datacenter profile would remove it; that needs Batfish and both gates
-re-validated and is not done.
+**What the drift check found:** under `frr defaults datacenter`, applying a bundle whose FRR configs
+were unchanged left all three routers running with `no bgp deterministic-med` and without
+`use-underlays-nexthop-weight`. The cause is FRR bug
+[FRRouting/frr#22939](https://github.com/FRRouting/frr/issues/22939), fixed upstream but in no release
+yet. Since [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) the generator uses the
+traditional profile, which does not trigger it, and an in-place apply leaves no drift
+([prod.md](prod.md#what-the-drift-check-found-an-frr-bug-now-avoided)). The same bug returns if anyone
+turns `bgp deterministic-med` on before FRR ships the fix.
 
 ## Gate 3 itself
 
