@@ -10,7 +10,8 @@ disruption problems; this path does not.
            tampered copy is refused
   extract  unpack a verified bundle into a render directory
   apply    apply a new bundle to the running lab (frr-reload.py --reload, atomic nft -f) while
-           two probes each hold one TCP connection and count failed requests
+           two probes each hold one TCP connection and count failed requests, and a ping across
+           the tunnel counts lost packets
   drift    compare what runs with what the bundle says (FRR and nftables), after a self-test
            that proves a planted drift is detected
   identities  check that prod runs the SOPS-managed identities: each router's WireGuard key and
@@ -25,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -135,6 +137,11 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
     for name, (node, url, extra) in probes.items():
         lab.run(["docker", "exec", "-d", lab.container(node), "sh", "-c",
                  f"pp-probe.py hold {url} --seconds {seconds} {extra} > /tmp/hold-{name}.json"])
+    # Router to router across the tunnel, five pings a second for most of the window: a dropped
+    # tunnel or a flushed ruleset shows as lost packets even where TCP would retransmit and recover.
+    pings = (seconds - 5) * 5
+    lab.run(["docker", "exec", "-d", lab.container("rtr-a"), "sh", "-c",
+             f"ping -q -i 0.2 -W 1 -c {pings} 172.31.255.1 > /tmp/ping-tunnel.txt 2>&1"])
     probe_start = time.monotonic()
     time.sleep(10)
     steps = []
@@ -160,8 +167,13 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
             results[name] = {"error": out[-300:]}
     lost = sum(p.get("failed", 0) for p in results.values())
     broken = sum(max(p.get("connections", 1) - 1, 0) for p in results.values())
+    out = lab.dexec("rtr-a", "cat", "/tmp/ping-tunnel.txt").stdout
+    m = re.search(r"(\d+) packets transmitted, (\d+) received", out)
+    ping = ({"sent": int(m[1]), "received": int(m[2]), "lost": int(m[1]) - int(m[2])} if m
+            else {"error": out[-300:]})
+    results["tunnel_ping"] = ping
     return {"steps": steps, "apply_seconds": apply_s, "apply_window_s": window, "probes": results,
-            "requests_failed": lost, "connections_broken": broken,
+            "requests_failed": lost, "connections_broken": broken, "pings_lost": ping.get("lost"),
             "ok": all(s["rc"] == 0 for s in steps) and all("error" not in p for p in results.values())}
 
 

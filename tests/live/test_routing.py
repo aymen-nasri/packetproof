@@ -1,11 +1,13 @@
 """Routing: BGP sessions, what each router learned and from where, and what the ISP may see."""
 
 import ipaddress
+import re
 import time
 
 import pytest
 
-from expect import RTR_A_WG, RTR_B_WG, SITE_A_PRIVATE, SITE_B_PRIVATE
+from expect import (HAPROXY, RTR_A_DMZ, RTR_A_LO, RTR_A_WG, RTR_B_LAN, RTR_B_LO, RTR_B_WG, SITE_A_PRIVATE,
+                    SITE_B_PRIVATE)
 
 SESSIONS = {
     "rtr-a": ["198.51.100.0", RTR_B_WG],
@@ -52,3 +54,15 @@ def test_site_b_internet_egress_is_local(lab):
     """Site B's default route points at its own ISP link, never into the tunnel."""
     default = lab.routes("rtr-b").get("0.0.0.0/0", {})
     assert default.get("ifaces") == ["eth1"], default
+
+
+def test_traceroute_from_site_b_crosses_the_tunnel_not_the_isp(lab):
+    """INV-07 as an operator would see it: a TCP traceroute from LAN-B along an allowed flow (443
+    to haproxy) shows rtr-b, then rtr-a, then haproxy. The ISP carries the packets too, but only
+    inside the encrypted tunnel, so it never appears as a hop."""
+    out = lab.sh("client-b", f"nmap -Pn -n -sS -p 443 --traceroute -oX - {HAPROXY}", timeout=120).stdout
+    hops = [ip for _, ip in sorted((int(t), ip) for t, ip in re.findall(r'<hop ttl="(\d+)" ipaddr="([\d.]+)"', out))]
+    assert hops, f"no traceroute in the nmap output: {out[-400:]}"
+    assert len(hops) == 3 and hops[-1] == HAPROXY, hops
+    assert hops[0] in {RTR_B_LAN, RTR_B_LO, RTR_B_WG}, f"first hop is not rtr-b: {hops}"
+    assert hops[1] in {RTR_A_WG, RTR_A_LO, RTR_A_DMZ}, f"second hop is not rtr-a: {hops}"

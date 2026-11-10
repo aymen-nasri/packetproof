@@ -6,6 +6,7 @@
 #   make unit            generator unit tests (no containers)
 #   make gate1           Gate 1: Conftest, loaded nftables, vtysh, Batfish (Batfish must be running)
 #   make test            Gate 2: render, deploy, test, collect evidence, destroy
+#   make bundle          the config bundle: the rendered lab, packed reproducibly
 #   make test FAULT=F08  the same with one planted fault
 #   make lock            re-generate the hashed lock files from requirements*.in (needs uv)
 #
@@ -19,11 +20,12 @@ EVIDENCE ?= evidence
 CONFTEST ?= conftest
 FAULT    ?=
 SECRETS  ?=
+BUNDLE   ?= packetproof-config.tgz
 
-.PHONY: help venv venv-batfish images image-router render unit gate1 deploy gate2 evidence destroy test lock
+.PHONY: help venv venv-batfish images image-router render bundle unit gate1 deploy gate2 evidence destroy test lock
 
 help:
-	@sed -n '1,14p' Makefile
+	@sed -n '1,15p' Makefile
 
 venv:
 	python3 -m venv $(VENV)
@@ -41,6 +43,17 @@ image-router:
 
 render:
 	$(PY) -m packetproof render $(if $(FAULT),--fault $(FAULT)) --out $(RENDER)
+
+# Byte-for-byte reproducible: sorted names, numeric root ownership, and every file stamped with the
+# commit's time (SOURCE_DATE_EPOCH), not 0, because NSD will not load a zone file whose mtime is 0
+# (prod run 42827614277). bundle.yml and release.yml both build with this target, and release.yml
+# requires the two results to be identical.
+bundle:
+	$(MAKE) --no-print-directory render RENDER=out/lab
+	git rev-parse HEAD > out/lab/COMMIT
+	tar --sort=name --mtime="@$$(git log -1 --format=%ct)" --owner=0 --group=0 --numeric-owner -C out -cf out/bundle.tar lab
+	gzip -n -c out/bundle.tar > $(BUNDLE)
+	rm -f out/bundle.tar
 
 unit:
 	$(PY) -m pytest -q -p no:cacheprovider tests/unit
