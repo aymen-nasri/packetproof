@@ -2,6 +2,13 @@
 
 Style rules carried over from week 1 (docs/go-no-go.md): blocks end with '!' rather than 'exit'
 and there is no 'log stdout' line, because Batfish's FRR grammar has neither.
+
+Profile: `frr defaults traditional`, with the fast timers set explicitly. The datacenter profile
+was used until prod's drift check caught an FRR 10.7.1 bug it triggers (FRRouting/frr#22939): with
+deterministic-med on, which that profile does by default, `show running-config` prints a spurious
+`use-underlays-nexthop-weight`, and removing it (as frr-reload.py does) switches deterministic-med
+off. Fixed upstream (FRRouting/frr#22552, backported to stable/10.7) but in no release yet. The
+traditional profile also keeps RFC 8212's `ebgp-requires-policy` on by default.
 """
 
 from __future__ import annotations
@@ -9,6 +16,8 @@ from __future__ import annotations
 from .model import TUNNEL_IF, UPLINK_IF, Network
 
 FRR_VERSION = "10.7.1"
+PROFILE = "traditional"
+KEEPALIVE, HOLD, CONNECT_RETRY = 3, 9, 10   # traditional defaults are 60, 180 and 120 seconds
 
 # What a site router accepts from the ISP: the internet, but never private space or its own prefix.
 BOGONS = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8"]
@@ -44,7 +53,7 @@ VTYSH_CONF = "service integrated-vtysh-config\n"
 
 
 def _header(name: str) -> list[str]:
-    return [f"frr version {FRR_VERSION}", "frr defaults datacenter", f"hostname {name}",
+    return [f"frr version {FRR_VERSION}", f"frr defaults {PROFILE}", f"hostname {name}",
             "service integrated-vtysh-config", "!"]
 
 
@@ -80,14 +89,16 @@ def site_router(net: Network, site: dict) -> str:
 
     isp_peer = site["uplink"]["isp_address"]
     tun_peer = site["wireguard"]["peer_address"]
+    # RFC 8212 (no route in or out of an eBGP session without a policy) is on by default under the
+    # traditional profile; Gate 3's fault F06 is what showed it matters.
     out += [f"router bgp {site['asn']}", f" bgp router-id {site['router_id']}",
-            # RFC 8212: no route in or out of an eBGP session without an explicit policy. FRR's
-            # datacenter profile turns this off by default; Gate 3 (fault F06) showed why it matters.
-            " bgp ebgp-requires-policy",
+            f" timers bgp {KEEPALIVE} {HOLD}",
             f" neighbor {isp_peer} remote-as {site['bgp']['isp']['remote_asn']}",
             f" neighbor {isp_peer} description isp",
+            f" neighbor {isp_peer} timers connect {CONNECT_RETRY}",
             f" neighbor {tun_peer} remote-as {site['bgp']['tunnel']['remote_asn']}",
             f" neighbor {tun_peer} description {peer_site['router']} over {TUNNEL_IF}",
+            f" neighbor {tun_peer} timers connect {CONNECT_RETRY}",
             " !", " address-family ipv4 unicast", "  redistribute connected", "  redistribute static",
             f"  neighbor {isp_peer} route-map RM-ISP-IN in",
             f"  neighbor {isp_peer} route-map RM-ISP-OUT out",
@@ -110,9 +121,10 @@ def isp_router(net: Network) -> str:
             f" ip address {isp['outside']['gateway']}/{isp['outside']['prefix'].split('/')[1]}", "!"]
     # The ISP is "the internet": it passes whatever its customers send and gives them a default.
     out += ["route-map RM-ANY permit 10", "!"]
-    out += [f"router bgp {isp['asn']}", f" bgp router-id {isp['router_id']}"]
+    out += [f"router bgp {isp['asn']}", f" bgp router-id {isp['router_id']}", f" timers bgp {KEEPALIVE} {HOLD}"]
     for s in sites:
-        out.append(f" neighbor {s['uplink']['address'].split('/')[0]} remote-as {s['asn']}")
+        peer = s["uplink"]["address"].split("/")[0]
+        out += [f" neighbor {peer} remote-as {s['asn']}", f" neighbor {peer} timers connect {CONNECT_RETRY}"]
     out += [" !", " address-family ipv4 unicast", "  redistribute connected"]
     for s in sites:
         peer = s["uplink"]["address"].split("/")[0]
@@ -122,7 +134,9 @@ def isp_router(net: Network) -> str:
     return "\n".join(out) + "\n"
 
 
-BATFISH_UNSUPPORTED = {" bgp ebgp-requires-policy"}
+# Lines Batfish's FRR grammar does not know, left out of the snapshot. Empty since the move to
+# the traditional profile made the explicit `bgp ebgp-requires-policy` unnecessary.
+BATFISH_UNSUPPORTED: set[str] = set()
 
 
 def batfish_file(hostname: str, frr_conf: str, interfaces: list[str]) -> str:
