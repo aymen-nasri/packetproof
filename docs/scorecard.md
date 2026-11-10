@@ -9,21 +9,29 @@ by the rules in [method.md](method.md), part 6. The newest run is published at
 
 | Run | Commit | Baseline passed | Caught first by Gate 1 | Caught only by Gate 2 | Escaped | Incidental | Attack paths blocked | Fault job time, median (min to max) |
 |---|---|---|---|---|---|---|---|---|
-| [42717245768](https://github.com/aymen-nasri/packetproof/actions/runs/42717245768) | 8fd0717 | yes | 19 | 7 | 4 | 0 | 12 of 12 | 413 s (280 to 1013) |
-| [42720416920](https://github.com/aymen-nasri/packetproof/actions/runs/42720416920) | 8fd0717 | yes | 19 | 7 | 4 | 0 | 12 of 12 | 413 s (274 to 1033) |
-| [42720428776](https://github.com/aymen-nasri/packetproof/actions/runs/42720428776) | 8fd0717 | yes | 19 | 7 | 4 | 0 | 12 of 12 | 412 s (270 to 1011) |
-| [42785569385](https://github.com/aymen-nasri/packetproof/actions/runs/42785569385) | 8fd0717 | yes | 19 | 7 | 4 | 0 | 12 of 12 | 408 s (270 to 1002) |
-| [42836207602](https://github.com/aymen-nasri/packetproof/actions/runs/42836207602) | 7e3c7bc | yes | 19 | 8 | 3 | 0 | 12 of 12 | 410 s (263 to 1028) |
-| [42840091894](https://github.com/aymen-nasri/packetproof/actions/runs/42840091894) | 7e3c7bc | yes | 19 | 8 | 3 | 0 | 12 of 12 | 413 s (279 to 1068) |
-| [42840106930](https://github.com/aymen-nasri/packetproof/actions/runs/42840106930) | 7e3c7bc | yes | 19 | 8 | 3 | 0 | 12 of 12 | 416 s (279 to 1046) |
+| [42717245768](https://github.com/aymen-nasri/packetproof/actions/runs/42717245768) | [8fd0717](https://github.com/aymen-nasri/packetproof/commit/8fd0717) | yes | 19 | 7 | 4 | 0 | 12 of 12 | 413 s (280 to 1013) |
+| [42720416920](https://github.com/aymen-nasri/packetproof/actions/runs/42720416920) | [8fd0717](https://github.com/aymen-nasri/packetproof/commit/8fd0717) | yes | 19 | 7 | 4 | 0 | 12 of 12 | 413 s (274 to 1033) |
+| [42720428776](https://github.com/aymen-nasri/packetproof/actions/runs/42720428776) | [8fd0717](https://github.com/aymen-nasri/packetproof/commit/8fd0717) | yes | 19 | 7 | 4 | 0 | 12 of 12 | 412 s (270 to 1011) |
+| [42785569385](https://github.com/aymen-nasri/packetproof/actions/runs/42785569385) | [8fd0717](https://github.com/aymen-nasri/packetproof/commit/8fd0717) | yes | 19 | 7 | 4 | 0 | 12 of 12 | 408 s (270 to 1002) |
+| [42836207602](https://github.com/aymen-nasri/packetproof/actions/runs/42836207602) | [7e3c7bc](https://github.com/aymen-nasri/packetproof/commit/7e3c7bc) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 410 s (263 to 1028) |
+| [42840091894](https://github.com/aymen-nasri/packetproof/actions/runs/42840091894) | [7e3c7bc](https://github.com/aymen-nasri/packetproof/commit/7e3c7bc) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 413 s (279 to 1068) |
+| [42840106930](https://github.com/aymen-nasri/packetproof/actions/runs/42840106930) | [7e3c7bc](https://github.com/aymen-nasri/packetproof/commit/7e3c7bc) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 416 s (279 to 1046) |
+| [42853952123](https://github.com/aymen-nasri/packetproof/actions/runs/42853952123) | [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 416 s (276 to 1038) |
+| [42856195978](https://github.com/aymen-nasri/packetproof/actions/runs/42856195978) | [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 416 s (271 to 1038) |
+| [42857438347](https://github.com/aymen-nasri/packetproof/actions/runs/42857438347) | [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 410 s (278 to 1052) |
 
-**Stability.** The 4 runs on 8fd0717 gave identical verdicts for every fault and both gates: yes. The 3 runs on 7e3c7bc: yes. No fault is flaky under the method's rule.
+**The commits.**
+- [8fd0717](https://github.com/aymen-nasri/packetproof/commit/8fd0717), the first design: 4 runs, identical verdicts for every fault and both gates: yes.
+- [7e3c7bc](https://github.com/aymen-nasri/packetproof/commit/7e3c7bc), after the two fixes Gate 3 pointed at: RFC 8212's safety net set explicitly, and a path-MTU test that needs path-MTU discovery: 3 runs, identical verdicts for every fault and both gates: yes.
+- [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2), after moving FRR from the datacenter to the traditional profile, to avoid FRR bug #22939 that prod's drift check found: 3 runs, identical verdicts for every fault and both gates: yes.
 
-**What changed between the two commits.** Two fixes that Gate 3 itself pointed at ([limits.md](limits.md)): FRR's RFC 8212 safety net turned back on, and Gate 2's path-MTU test made to need path-MTU discovery. Exactly two verdicts moved, and no other.
+No fault is flaky under the method's rule. Between consecutive commits, the verdicts that moved:
+- 8fd0717 to 7e3c7bc: F06 (escaped to caught by gate 2); F11 (caught by gate 1 to caught by gate 1, Gate 2 now catches it too).
+- 7e3c7bc to 42970a2: none.
 
-## Every fault, on the current design (7e3c7bc)
+## Every fault, on the current design (42970a2)
 
-| ID | Layer | Fault | Gate 1 | Gate 2 | Verdict | On 8fd0717 | Predicted first gate |
+| ID | Layer | Fault | Gate 1 | Gate 2 | Verdict | On the first design | Predicted first gate |
 |---|---|---|---|---|---|---|---|
 | F01 | BGP | Prefix-list removed on rtr-a's export to isp, so private prefixes leak to the ISP | caught | caught | **caught by gate 1** | same | Gate 1 |
 | F02 | BGP | Wrong remote AS for the tunnel peer on rtr-b (65003 instead of 65001) | caught | caught | **caught by gate 1** | same | Gate 1 |
