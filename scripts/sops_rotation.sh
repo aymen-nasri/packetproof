@@ -31,17 +31,22 @@ grep -qF -- "$wg_key" lab.sops.yaml || grep -qF -- "$ca_pw" lab.sops.yaml; leake
 [ "$leaked" = 1 ]; result $? "the encrypted file contains neither secret value"
 [ "$(value old.key "$WG")" = "$wg_key" ] && [ "$(value old.key "$CA")" = "$ca_pw" ]; result $? "the old key decrypts both values before rotation"
 [ -z "$(value new.key "$WG")" ]; result $? "the new key cannot decrypt before it is added"
-cipher_before=$(grep 'rtr-a_private_key:' lab.sops.yaml | sha256sum)
+cipher_before=$(grep -o 'ENC\[AES256_GCM,data:[^,]*' lab.sops.yaml | sort | sha256sum)
+n_values=$(grep -c 'ENC\[AES256_GCM' lab.sops.yaml)
 
 # Rotate: a new data key, the new recipient added, the old recipient removed.
+cp lab.sops.yaml lab.sops.yaml.before
 if ! SOPS_AGE_KEY_FILE=old.key sops rotate --in-place --add-age "$new_pub" --rm-age "$old_pub" lab.sops.yaml; then
   echo "- FAIL: the rotation command itself failed"
   exit 1
 fi
-cipher_after=$(grep 'rtr-a_private_key:' lab.sops.yaml | sha256sum)
+cipher_after=$(grep -o 'ENC\[AES256_GCM,data:[^,]*' lab.sops.yaml | sort | sha256sum)
+changed=$(comm -12 <(grep -o 'ENC\[AES256_GCM,data:[^,]*' lab.sops.yaml.before | sort) \
+                   <(grep -o 'ENC\[AES256_GCM,data:[^,]*' lab.sops.yaml | sort) | wc -l)
 
 [ "$(value new.key "$WG")" = "$wg_key" ] && [ "$(value new.key "$CA")" = "$ca_pw" ]; result $? "the new key decrypts both values, unchanged, after rotation"
 [ -z "$(value old.key "$WG")" ]; result $? "the old key no longer decrypts"
-[ "$cipher_before" != "$cipher_after" ]; result $? "every value was re-encrypted under a new data key"
+[ "$cipher_before" != "$cipher_after" ] && [ "$changed" = 0 ] && [ "$n_values" -ge 2 ]
+result $? "all $n_values encrypted values (the MAC included) were re-encrypted; sops rotate also replaces the data key, which this test cannot see"
 ! grep -qF -- "$old_pub" lab.sops.yaml; result $? "the old recipient is gone from the file"
 exit "$fail"
