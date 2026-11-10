@@ -168,6 +168,7 @@ def render(net: Network, out: Path) -> None:
         script, files = render_services.start_script(net, h)
         _write(d / "start.sh", script)
         for name, content in files.items():
+            (d / name).parent.mkdir(parents=True, exist_ok=True)
             _write(d / name, content)
     _write(out / "topo.clab.yml", topology(net))
     _write(out / "intent.json", json.dumps(net.data, indent=2) + "\n")
