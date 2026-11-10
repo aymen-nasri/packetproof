@@ -56,6 +56,22 @@ class Network:
     # ---- references -----------------------------------------------------------------------
     def _check_references(self) -> None:
         errors = []
+        names = [h["name"] for h in self.data["hosts"]]
+        errors += [f"host name {n} is used twice" for n in sorted({n for n in names if names.count(n) > 1})]
+        zone_names = [z["name"] for s in self.data["sites"] for z in s["zones"]]
+        errors += [f"zone name {n} is used twice" for n in sorted({n for n in zone_names if zone_names.count(n) > 1})]
+        for s in self.data["sites"]:
+            for z in s["zones"]:
+                if ipaddress.ip_address(z["gateway"]) not in ipaddress.ip_network(z["prefix"]):
+                    errors.append(f"zone {z['name']}: gateway {z['gateway']} is outside {z['prefix']}")
+                if z.get("interface_zone") and z["interface_zone"] not in self.zones:
+                    errors.append(f"zone {z['name']}: interface_zone {z['interface_zone']} is not a zone")
+        for field, role in (("proxy", "proxy"), ("monitoring", "monitor")):
+            host = self.data[field]["host"]
+            if self.hosts.get(host, {}).get("role") != role:
+                errors.append(f"{field}.host {host} is not the {role} host")
+        if self.hosts.get(self.data["pki"]["ca"], {}).get("role") != "ca":
+            errors.append(f"pki.ca {self.data['pki']['ca']} is not the ca host")
         for h in self.data["hosts"]:
             if h["zone"] != "outside" and h["zone"] not in self.zones:
                 errors.append(f"host {h['name']}: unknown zone {h['zone']}")

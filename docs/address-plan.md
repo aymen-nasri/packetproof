@@ -38,7 +38,7 @@ Every address below lives in [network.yaml](../network.yaml); this page explains
 
 | Link | Prefix | Ends |
 |---|---|---|
-| WireGuard tunnel (wg0) | 172.31.255.0/31 | rtr-a .0, rtr-b .1; MTU 1420 (1500 minus 80 bytes of WireGuard over IPv4/UDP) |
+| WireGuard tunnel (wg0) | 172.31.255.0/31 | rtr-a .0, rtr-b .1; MTU 1420 (1500 minus 80 bytes: the overhead of WireGuard over IPv6; over IPv4 it is 60, so 1420 leaves margin) |
 | rtr-a to the ISP | 198.51.100.0/31 | isp .0, rtr-a .1 (rtr-a's WireGuard endpoint) |
 | rtr-b to the ISP | 203.0.113.0/31 | isp .0, rtr-b .1 (rtr-b's WireGuard endpoint) |
 | The ISP to the internet | 192.0.2.0/24 | isp .1, outside host .10; MTU 1400, and the outside host advertises a 1460-byte MSS, so path-MTU discovery is needed |
