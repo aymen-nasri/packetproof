@@ -1,8 +1,10 @@
 # Secrets: what is secret, where it lives, how it changes
 
-**Status, 2026-11-10:** the mechanism below is built. Until the repository owner runs
-`scripts/bootstrap-sops-key.ps1` and `secrets-bootstrap.yml`, there is no `secrets/prod.sops.yaml`,
-and prod runs with throwaway identities and says so.
+**Status, 2026-11-10:** the age key exists (recipient
+`age1f804f0j6hh9kmgmxtsydfn025j7drsuy2s2ncvesuyh6ad834gxs6kqt5z`), and
+[secrets-bootstrap run 42876173273](https://github.com/aymen-nasri/packetproof/actions/runs/42876173273)
+created the identities now committed in `secrets/`. Whether prod runs them is shown by prod's step
+5c; the first such run is recorded in [prod.md](prod.md).
 
 PacketProof has two kinds of lab, and they treat secrets differently on purpose.
 
