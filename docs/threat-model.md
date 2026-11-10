@@ -42,10 +42,12 @@ the control works. Invariants (INV), attack paths (AP) and planted faults (F) ar
 | Site-to-site traffic in clear | private prefixes only over WireGuard (INV-07) | Gate 2 routing tests; F05 |
 | Rogue or expired certificates accepted | private CA, short-lived ACME certificates, clients verify (INV-10) | Gate 2 TLS refusals; F28, F29 |
 | A hijacked Action or moved tag | every Action pinned to a commit SHA, SHA pinning enforced by the repository, Dependabot with a 7-day cooldown | zizmor and OpenSSF Scorecard on every push |
-| Secrets committed to Git | Gitleaks over the whole history; WireGuard keys generated inside each router and never stored | Gitleaks job; key-exchange design |
+| Secrets committed to Git | Gitleaks over the whole history; pull-request labs generate WireGuard keys inside each router; prod's long-lived keys are in Git only as SOPS ciphertext | Gitleaks job; secrets-bootstrap.yml refuses to upload ciphertext that contains a plaintext key |
+| Prod runs an identity other than the managed one | public halves committed next to the ciphertext; the age key readable only by the `prod` environment (deployments from `main`) | prod.yml step 5c: both WireGuard keys, the CA root fingerprint, and the served certificate against the committed root |
 | A replaced image | images pinned by digest, signed with cosign, verified before prod uses them | images.yml, prod.yml step 1 |
 | An edited config bundle | provenance attestation and cosign signature, verified before apply | prod.yml step 2: a tampered bundle is refused |
-| Secrets readable after a key is retired | SOPS + age with rotation | secrets.yml rotation test |
+| Secrets readable after a key is retired | SOPS + age with rotation; a leaked key means new identities too, because Git keeps the old ciphertext | secrets.yml rotation test; [secrets.md](secrets.md) |
+| A release file swapped after publishing | signed SHA256SUMS, an attested and signed bundle that must match main's byte for byte, image SBOMs taken from signed attestations | release.yml verifies every file the way [verify.md](verify.md) tells a user to |
 
 ## OpenSSF Scorecard checks that stay low, and why
 
