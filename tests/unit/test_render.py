@@ -38,6 +38,19 @@ def test_frr_has_no_syntax_batfish_cannot_read(baseline):
         assert "exit" not in lines and not any(line.startswith("log ") for line in lines)
 
 
+def test_frr_profile_keeps_rfc8212_and_avoids_frr_22939(baseline):
+    """The datacenter profile turns RFC 8212's ebgp-requires-policy off and turns deterministic-med
+    on, which triggers FRR bug #22939 (frr-reload flips deterministic-med). Stay on traditional,
+    with the fast timers set explicitly, and feed Batfish the whole config."""
+    for r in ("rtr-a", "rtr-b", "isp"):
+        text = (baseline / "routers" / r / "frr.conf").read_text()
+        assert "frr defaults traditional" in text and "datacenter" not in text
+        assert " timers bgp 3 9" in text and "timers connect 10" in text
+        assert "deterministic-med" not in text and "ebgp-requires-policy" not in text
+        snapshot = (baseline / "batfish" / "configs" / f"{r}.cfg").read_text()
+        assert snapshot.endswith(text)
+
+
 def test_firewalls_default_drop(baseline):
     for r in ("rtr-a", "rtr-b"):
         text = (baseline / "routers" / r / "ruleset.nft").read_text()
