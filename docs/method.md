@@ -12,26 +12,31 @@ Results must never shape the rules that judge them, so this file follows three r
 3. **Predictions are not rules.** Where this file predicts which gate will catch a fault, the
    prediction is there to be checked and is scored as right or wrong. It never decides a result.
 
-The design comes from the research report that recommended this project. Its week-1 table is
-reproduced in part 1 with the exact procedure added. Parts 2 to 5 fix the invariants, the planted
+The design follows the project's brief, a planning document that is not part of this repository.
+Its table of feasibility checks is reproduced in part 1 with the exact procedure added. Parts 2 to 5 fix the invariants, the planted
 faults, the attack paths and the scoring rules for the later gates, so they too exist before any
 gate has run.
 
+**Reading it later.** This file describes the project as planned on 2026-11-09, so "will" and "not
+built yet" refer to that day. Every later change to a rule is a dated entry under
+[Amendments](#amendments); wording-only edits are listed under [Editorial changes](#editorial-changes).
+
 ## Contents
 
-- [Part 1: week-1 go/no-go tests](#part-1-week-1-gono-go-tests)
+- [Part 1: feasibility tests](#part-1-feasibility-tests)
 - [Part 2: the network the gates protect](#part-2-the-network-the-gates-protect)
 - [Part 3: hand-written invariants](#part-3-hand-written-invariants)
 - [Part 4: 30 planted faults](#part-4-30-planted-faults)
 - [Part 5: 12 attack paths, each paired with a legitimate flow](#part-5-12-attack-paths-each-paired-with-a-legitimate-flow)
 - [Part 6: how gates and the scorecard are judged](#part-6-how-gates-and-the-scorecard-are-judged)
 - [Amendments](#amendments)
+- [Editorial changes](#editorial-changes)
 
 ---
 
-## Part 1: week-1 go/no-go tests
+## Part 1: feasibility tests
 
-Five assumptions are tested. Each gets a recorded **GO** or **NO-GO** in `docs/go-no-go.md`, with
+Five assumptions are tested. Each gets a recorded **GO** or **NO-GO** in [feasibility.md](feasibility.md), with
 links to the CI runs and the tool versions used. Where a test is NO-GO, the fallback listed here is
 applied and recorded, not improvised. KVM is not tested: it is kept out of the critical path on
 purpose.
@@ -45,16 +50,16 @@ purpose.
   built in the job. Hosts: `alpine:3.24.4` pinned by digest.
 - Batfish: `batfish/allinone` pinned by digest (the `latest` build of 2026-08-27) and pybatfish
   2026.9.17.3748.
-- All router configs are rendered by one small Python script from one description of the week-1
+- All router configs are rendered by one small Python script from one description of the feasibility
   topology, so the configs Batfish reads are the configs the live lab runs.
 - Addresses: internal ranges come from 172.16.0.0/12, avoiding Docker's 172.17.0.0/16 and
   containerlab's management 172.20.20.0/24. Simulated public addresses use the documentation
   ranges 198.51.100.0/24, 203.0.113.0/24 and 192.0.2.0/24 (RFC 5737).
 - WireGuard keys are generated inside the job and never written to the repository or the logs.
 
-### Week-1 topologies
+### Feasibility topologies
 
-**`w1-bgp`** (tests A, B, D): `client-a -- rtr-a -- isp -- rtr-b -- client-b`.
+**`feas-bgp`** (tests A, B, D): `client-a -- rtr-a -- isp -- rtr-b -- client-b`.
 
 | Node | AS | Interfaces |
 |---|---|---|
@@ -68,12 +73,12 @@ eBGP sessions rtr-a to isp and isp to rtr-b. Each site router redistributes conn
 its outbound route-map to isp allows only its LAN: 172.16.10.0/24 from rtr-a, 172.24.10.0/24 from
 rtr-b. The loopbacks must never leave their router.
 
-**`w1-wg`** (test C): the same five nodes. isp runs no BGP and has no route to either LAN. rtr-a
+**`feas-wg`** (test C): the same five nodes. isp runs no BGP and has no route to either LAN. rtr-a
 and rtr-b reach each other's eth1 address through isp by static routes. wg0 is 172.31.255.0/31 on
 rtr-a and 172.31.255.1/31 on rtr-b, MTU 1420, UDP port 51820, kernel WireGuard, AllowedIPs limited
 to the peer's tunnel address and LAN. eBGP 65001 to 65002 runs over the wg0 addresses.
 
-### The planted error used in week 1 (W1-F)
+### The planted error used in the feasibility tests (FEAS-F)
 
 In rtr-a's outbound prefix-list to isp, the line `permit 172.16.10.0/24` is replaced by
 `permit 172.16.0.0/16 le 32`. Effect: rtr-a's loopback 172.16.255.1/32 leaks to isp. Pings still
@@ -83,7 +88,7 @@ work, so only a routing-table check can see it.
 
 | | |
 |---|---|
-| Procedure | 5 independent jobs (a matrix of 5) in one workflow run. Each deploys `w1-bgp`, waits up to 120 s for convergence, runs the checks, saves evidence, destroys the lab. |
+| Procedure | 5 independent jobs (a matrix of 5) in one workflow run. Each deploys `feas-bgp`, waits up to 120 s for convergence, runs the checks, saves evidence, destroys the lab. |
 | Checks | (1) every BGP session is Established, seen from both ends; (2) rtr-a has 172.24.10.0/24 and rtr-b has 172.16.10.0/24, learned by BGP; (3) isp has exactly 172.16.10.0/24 and 172.24.10.0/24 from inside 172.16.0.0/12, nothing else; (4) `ping -c 5` client-a to client-b and back, at least 4 of 5 replies each way. |
 | Timing | From the start of `containerlab deploy` to the end of the checks. Tool install and image build are timed separately (test D). |
 | **GO if** | 5 of 5 runs pass every check, and every run's deploy-plus-checks time is under 5 minutes. |
@@ -93,36 +98,36 @@ work, so only a routing-table check can see it.
 
 | | |
 |---|---|
-| Procedure | Render the 3 routers of `w1-bgp` as a Cumulus-style snapshot (one file per router: hostname, `/etc/network/interfaces`, `/etc/cumulus/ports.conf`, `frr.conf`), load it in `batfish/allinone` on the runner, and ask `fileParseStatus`, `parseWarning`, `initIssues`, `bgpSessionCompatibility`, `bgpSessionStatus` and `routes`. Then load the same snapshot with the planted error W1-F and ask `routes` again. |
-| **GO if** | All five hold: (1) every file's parse status is PASSED; (2) zero parse warnings (the renderer emits only features the project uses, so any unrecognized line is in a used feature); (3) no init issue that names BGP, a prefix-list, a route-map, an interface address or a static route; other init issues are listed in the result; (4) every configured BGP session is a unique compatible match and Established; (5) isp's routes contain 172.16.255.1/32 in the W1-F snapshot and not in the baseline. |
-| Recorded, not judged (B2) | The `w1-wg` routers as a second snapshot: whether Batfish recognises `wg0` and whether it reports the rtr-a to rtr-b session over it. This does not change the verdict. It decides which Batfish questions Gate 1 may rely on later, because the real design runs its main BGP session over the tunnel. |
+| Procedure | Render the 3 routers of `feas-bgp` as a Cumulus-style snapshot (one file per router: hostname, `/etc/network/interfaces`, `/etc/cumulus/ports.conf`, `frr.conf`), load it in `batfish/allinone` on the runner, and ask `fileParseStatus`, `parseWarning`, `initIssues`, `bgpSessionCompatibility`, `bgpSessionStatus` and `routes`. Then load the same snapshot with the planted error FEAS-F and ask `routes` again. |
+| **GO if** | All five hold: (1) every file's parse status is PASSED; (2) zero parse warnings (the renderer emits only features the project uses, so any unrecognized line is in a used feature); (3) no init issue that names BGP, a prefix-list, a route-map, an interface address or a static route; other init issues are listed in the result; (4) every configured BGP session is a unique compatible match and Established; (5) isp's routes contain 172.16.255.1/32 in the FEAS-F snapshot and not in the baseline. |
+| Recorded, not judged (B2) | The `feas-wg` routers as a second snapshot: whether Batfish recognises `wg0` and whether it reports the rtr-a to rtr-b session over it. This does not change the verdict. It decides which Batfish questions Gate 1 may rely on later, because the real design runs its main BGP session over the tunnel. |
 | If not | Drop Batfish. Gate 1 becomes `vtysh -C`, the `frr-reload.py --test` diff, Conftest and Python route-policy checks. File the parse gap upstream and say why in the scorecard. |
 
 ### Test C: WireGuard works inside containers
 
 | | |
 |---|---|
-| Procedure | In each of the same 5 jobs as test A, after `w1-bgp` is destroyed: load the `wireguard` module on the runner host, generate keys, deploy `w1-wg`, wait up to 120 s. |
+| Procedure | In each of the same 5 jobs as test A, after `feas-bgp` is destroyed: load the `wireguard` module on the runner host, generate keys, deploy `feas-wg`, wait up to 120 s. |
 | Checks | (1) `wg show wg0 latest-handshakes` is non-zero on both ends; (2) the BGP session over wg0 is Established on both ends. Extra evidence: (3) client-a and client-b ping each other, at least 4 of 5 replies each way; (4) isp has no route to 172.16.10.0/24 or 172.24.10.0/24; (5) during a ping, a capture on isp sees UDP 51820 and no ICMP between the two LAN addresses. Checks 3 to 5 prove that traffic really crossed the tunnel. |
-| **GO if** | The report's rule: handshake and BGP up (checks 1 and 2) on the runner, in every run. If checks 3 to 5 fail while 1 and 2 pass, the verdict is still GO, and the failure is recorded as a week-3 risk. |
+| **GO if** | The brief's rule: handshake and BGP up (checks 1 and 2) on the runner, in every run. If checks 3 to 5 fail while 1 and 2 pass, the verdict is still GO, and the failure is recorded as a risk for the full lab. |
 | If not | Use userspace wireguard-go. If WSL2 fails (test E), run the tunnel in CI only. |
 
 ### Test D: the CI time budget holds
 
 | | |
 |---|---|
-| Full run | One job doing, in order, everything a PR gate will do: check out, install containerlab, build the router image, render configs, start Batfish and ask test B's questions, deploy `w1-wg`, run test C's checks, destroy. Timed from the job's first step to its last. |
-| One planted fault | In the same job, after the full run, with tools, image and Batfish already warm: render with W1-F, ask Batfish `routes`, deploy `w1-bgp` with the fault, run test A's checks until they report the leak, destroy. Timed from render start to destroy end. |
+| Full run | One job doing, in order, everything a PR gate will do: check out, install containerlab, build the router image, render configs, start Batfish and ask test B's questions, deploy `feas-wg`, run test C's checks, destroy. Timed from the job's first step to its last. |
+| One planted fault | In the same job, after the full run, with tools, image and Batfish already warm: render with FEAS-F, ask Batfish `routes`, deploy `feas-bgp` with the fault, run test A's checks until they report the leak, destroy. Timed from render start to destroy end. |
 | **GO if** | Full run under 15 minutes, and the planted fault under 3 minutes. |
-| Caveat | The week-1 full run is a proxy: the real PR gate has more nodes and tests. It is re-measured at v0.1 and reported as a median with its range. |
+| Caveat | This full run is a proxy: the real pull-request gate has more nodes and tests. It is re-measured once built and reported as a median with its range. |
 | If not | Run Gate 3 nightly as parallel matrix jobs, and shrink the topology. |
 
-### Test E: the laptop can develop locally
+### Test E: local development on Windows
 
 | | |
 |---|---|
 | Inventory (2026-11-09, before the test) | Windows 10 Pro 19045, WSL 3.0.1, WSL kernel 6.18.40.1, only distribution `docker-desktop` (stopped), 15.3 GB RAM with 1.9 GB free at the time, virtualization enabled in firmware. Docker Desktop is installed but not running. |
-| Procedure | With the user's approval for the download, install the WSL-Containerlab distribution 0.83.0-1.0 (it brings its own Docker engine and needs WSL 2.4.4 or newer). Deploy `w1-bgp` once and run test A's checks. Then deploy `w1-wg` once and record test C's checks as information. |
+| Procedure | With the repository owner's approval for the download, install the WSL-Containerlab distribution 0.83.0-1.0 (it brings its own Docker engine and needs WSL 2.4.4 or newer). Deploy `feas-bgp` once and run test A's checks. Then deploy `feas-wg` once and record test C's checks as information. |
 | **GO if** | The 3-router lab comes up locally: test A's checks 1, 2 and 4 pass. |
 | If not | Use GitHub Codespaces (120 core-hours a month free, more with the student Pro plan). Otherwise develop in CI only. |
 
@@ -181,7 +186,7 @@ checks them with traffic.
 
 Each fault is one change, planted on a throwaway branch, as a pull request would bring it. "Where"
 says what the change edits: the intent (`network.yaml`), a template, or a generated file. Fault
-types follow the report's list and common real-world network mistakes. The prediction column is
+types follow the brief's list and common real-world network mistakes. The prediction column is
 scored, not used as a rule.
 
 | ID | Layer | Fault | Where | Predicted first gate |
@@ -332,3 +337,15 @@ things that touch this method:
 **What did not change.** Every other fault, invariant, attack path and pass rule stays word for
 word as written. Every run before this amendment stays on record as published.
 
+## Editorial changes
+
+Wording-only edits. None changes a rule, threshold, check, fault, attack path or result.
+
+### E1 (2026-11-10): names that only made sense inside the project's schedule
+
+Part 1's tests were first called the "week-1 go/no-go tests", after the brief's week-by-week plan.
+They are now the feasibility tests; their topologies `w1-bgp` and `w1-wg` are `feas-bgp` and
+`feas-wg`; the planted error W1-F is FEAS-F; the scripts moved from `week1/` to `feasibility/`; and
+"the research report" is called the project's brief. Test E's title names the platform it tested
+instead of "the laptop". The original wording is at
+[2f178eb](https://github.com/aymen-nasri/packetproof/blob/2f178eb/docs/method.md).

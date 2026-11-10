@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Apply the week-1 GO rules from docs/method.md to the CI results. Rules only, no tuning.
+"""Apply the feasibility GO rules from docs/method.md to the CI results. Rules only, no tuning.
 
-Usage: python3 week1/verdict.py results/ > verdict.md   (also writes results/verdict.json)
+Usage: python3 feasibility/verdict.py results/ > verdict.md   (also writes results/verdict.json)
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ def load(path: Path) -> dict | None:
 def main() -> int:
     res = Path(sys.argv[1])
     out: dict = {}
-    md = ["# Week-1 go/no-go: verdicts from this run", ""]
+    md = ["# Feasibility checks: verdicts from this run", ""]
 
     # Test A
     a = [load(res / f"A-run{i}.json") for i in range(1, RUNS + 1)]
@@ -42,7 +42,7 @@ def main() -> int:
         md += [f"- {'PASS' if ok else 'FAIL'}: {name}" for name, ok in out["B"]["criteria"]]
     md += [""]
 
-    # Test C: the report's rule is handshake and BGP up in every run; checks 3-5 are evidence.
+    # Test C: the brief's rule is handshake and BGP up in every run; checks 3-5 are evidence.
     c = [load(res / f"C-run{i}.json") for i in range(1, RUNS + 1)]
 
     def rule_ok(r: dict | None) -> bool:
@@ -69,7 +69,7 @@ def main() -> int:
         out["D"] = {"go": False, "detail": "missing"}
         md += ["**Test D (time budget):** NO-GO: result missing", ""]
 
-    md += ["Test E (laptop) is run outside CI and recorded in docs/go-no-go.md."]
+    md += ["Test E (local development on Windows) is not a CI test; it is recorded in docs/feasibility.md."]
     (res / "verdict.json").write_text(json.dumps(out, indent=2) + "\n")
     print("\n".join(md))
     return 0 if all(v.get("go") for v in out.values()) else 1

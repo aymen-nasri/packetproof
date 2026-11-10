@@ -1,15 +1,20 @@
-name: go-no-go
+name: feasibility
 
-# Week 1: the five go/no-go tests of docs/method.md, part 1 (test E runs on the laptop).
-# The verdict job applies the GO rules exactly as written there. Week 1 is recorded in
-# docs/go-no-go.md, so this now runs only on demand.
+# The feasibility checks of docs/method.md, part 1: can free GitHub runners carry this project?
+# (Test E, local development on Windows, is not a CI test.) The verdict job applies the GO rules
+# exactly as written there; the recorded results are in docs/feasibility.md. It runs on demand, and
+# on any pull request that changes the checks, so they keep working.
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "feasibility/**"
+      - ".github/workflows/feasibility.yml"
 
 permissions: {}
 
 concurrency:
-  group: go-no-go-${{ github.ref }}
+  group: feasibility-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -33,13 +38,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-lab
-      - name: Test A, deploy w1-bgp and check it
-        run: python3 week1/lab.py --lab w1-bgp --out "results/A-run$RUN.json" --evidence "evidence/A-run$RUN"
-      - name: Test C, deploy w1-wg (BGP over WireGuard) and check it
+      - name: Test A, deploy feas-bgp and check it
+        run: python3 feasibility/lab.py --lab feas-bgp --out "results/A-run$RUN.json" --evidence "evidence/A-run$RUN"
+      - name: Test C, deploy feas-wg (BGP over WireGuard) and check it
         if: ${{ !cancelled() }}
         run: |
           sudo modprobe wireguard
-          python3 week1/lab.py --lab w1-wg --out "results/C-run$RUN.json" --evidence "evidence/C-run$RUN"
+          python3 feasibility/lab.py --lab feas-wg --out "results/C-run$RUN.json" --evidence "evidence/C-run$RUN"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
@@ -65,22 +70,22 @@ jobs:
         run: make venv-batfish VENV="$RUNNER_TEMP/bf"
       - name: Render the baseline, the planted error and the tunnel snapshot
         run: |
-          python3 week1/render.py --lab w1-bgp --out build/w1-bgp
-          python3 week1/render.py --lab w1-bgp --fault W1-F --out build/w1-bgp-W1-F
-          python3 week1/render.py --lab w1-wg --out build/w1-wg
+          python3 feasibility/render.py --lab feas-bgp --out build/feas-bgp
+          python3 feasibility/render.py --lab feas-bgp --fault FEAS-F --out build/feas-bgp-FEAS-F
+          python3 feasibility/render.py --lab feas-wg --out build/feas-wg
       - name: Test B, ask Batfish
         run: >-
-          "$RUNNER_TEMP/bf/bin/python" week1/batfish_check.py
-          --baseline build/w1-bgp/batfish --fault build/w1-bgp-W1-F/batfish
-          --wg build/w1-wg/batfish --out results/B.json
+          "$RUNNER_TEMP/bf/bin/python" feasibility/batfish_check.py
+          --baseline build/feas-bgp/batfish --fault build/feas-bgp-FEAS-F/batfish
+          --wg build/feas-wg/batfish --out results/B.json
       - name: For the record, FRR's own syntax check (not part of the verdict)
         if: ${{ !cancelled() }}
         run: |
-          docker build -q -t packetproof/router:w1 images/router
+          docker build -q -t packetproof/router:feas images/router
           # vtysh -C checks frr.conf in its config directory, so mount each rendered directory there.
-          for d in build/w1-bgp/configs/* build/w1-wg/configs/*; do
+          for d in build/feas-bgp/configs/* build/feas-wg/configs/*; do
             echo "== $d/frr.conf"
-            docker run --rm -v "$PWD/$d:/tmp/cfg:ro" --entrypoint vtysh packetproof/router:w1               --config_dir /tmp/cfg --dryrun 2>&1 && echo "exit 0" || echo "exit $?"
+            docker run --rm -v "$PWD/$d:/tmp/cfg:ro" --entrypoint vtysh packetproof/router:feas               --config_dir /tmp/cfg --dryrun 2>&1 && echo "exit 0" || echo "exit $?"
           done | tee results/B-vtysh-dryrun.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
@@ -88,9 +93,9 @@ jobs:
           name: batfish
           path: |
             results/
-            build/w1-bgp/batfish/
-            build/w1-bgp-W1-F/batfish/
-            build/w1-wg/batfish/
+            build/feas-bgp/batfish/
+            build/feas-bgp-FEAS-F/batfish/
+            build/feas-wg/batfish/
           retention-days: 90
 
   budget:
@@ -112,32 +117,32 @@ jobs:
           make venv-batfish VENV="$RUNNER_TEMP/bf"  # hash-locked
       - name: Static stage, render and ask Batfish test B's questions
         run: |
-          python3 week1/render.py --lab w1-bgp --out build/w1-bgp
-          python3 week1/render.py --lab w1-bgp --fault W1-F --out build/w1-bgp-W1-F
+          python3 feasibility/render.py --lab feas-bgp --out build/feas-bgp
+          python3 feasibility/render.py --lab feas-bgp --fault FEAS-F --out build/feas-bgp-FEAS-F
           set +e
-          "$RUNNER_TEMP/bf/bin/python" week1/batfish_check.py --baseline build/w1-bgp/batfish \
-            --fault build/w1-bgp-W1-F/batfish --out results/D-full-batfish.json
+          "$RUNNER_TEMP/bf/bin/python" feasibility/batfish_check.py --baseline build/feas-bgp/batfish \
+            --fault build/feas-bgp-FEAS-F/batfish --out results/D-full-batfish.json
           echo "batfish exit $?"
-      - name: Live stage, deploy w1-wg and run test C's checks
+      - name: Live stage, deploy feas-wg and run test C's checks
         run: |
           sudo modprobe wireguard
           set +e
-          python3 week1/lab.py --lab w1-wg --out results/D-full-lab.json
+          python3 feasibility/lab.py --lab feas-wg --out results/D-full-lab.json
           echo "lab exit $?"
       - name: Stop the clock for the full run
         run: date +%s.%N > "$RUNNER_TEMP/t1"
-      - name: One planted fault (W1-F), warm, timed
+      - name: One planted fault (FEAS-F), warm, timed
         run: |
           date +%s.%N > "$RUNNER_TEMP/f0"
           set +e
-          python3 week1/render.py --lab w1-bgp --fault W1-F --out build/cycle/w1-bgp-W1-F
-          "$RUNNER_TEMP/bf/bin/python" week1/batfish_check.py --routes-only \
-            --fault build/cycle/w1-bgp-W1-F/batfish --out results/D-fault-batfish.json
-          python3 week1/lab.py --lab w1-bgp --fault W1-F --build build/cycle --out results/D-fault-lab.json
+          python3 feasibility/render.py --lab feas-bgp --fault FEAS-F --out build/cycle/feas-bgp-FEAS-F
+          "$RUNNER_TEMP/bf/bin/python" feasibility/batfish_check.py --routes-only \
+            --fault build/cycle/feas-bgp-FEAS-F/batfish --out results/D-fault-batfish.json
+          python3 feasibility/lab.py --lab feas-bgp --fault FEAS-F --build build/cycle --out results/D-fault-lab.json
           date +%s.%N > "$RUNNER_TEMP/f1"
       - name: Write the time-budget result
         run: >-
-          python3 week1/budget.py --t0 "$RUNNER_TEMP/t0" --t1 "$RUNNER_TEMP/t1"
+          python3 feasibility/budget.py --t0 "$RUNNER_TEMP/t0" --t1 "$RUNNER_TEMP/t1"
           --fault-start "$RUNNER_TEMP/f0" --fault-end "$RUNNER_TEMP/f1" --results results
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
@@ -166,7 +171,7 @@ jobs:
           set -o pipefail
           mkdir -p results
           find artifacts -name '*.json' -exec cp {} results/ \;
-          python3 week1/verdict.py results | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 feasibility/verdict.py results | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:

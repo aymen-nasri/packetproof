@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 704" width="960" height="704" role="img" aria-labelledby="t d">
+<title id="t">From merge to a release anyone can verify</title><desc id="d">Images and config bundles are signed where they are built; a release is rebuilt and must match.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a818b98" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#818b98"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="703" rx="14" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#1f2328">From merge to a release anyone can verify</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#59636e">Images and config bundles are signed where they are built; a release is rebuilt and must match.</text>
+<rect x="24" y="100" width="912" height="150" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="126" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">IMAGES · WHEN IMAGES/ CHANGES</text>
+<rect x="44" y="138" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="45" y="139" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="62" y="160" class="s" font-size="14" fill="#1f2328" font-weight="600">Build</text>
+<text x="62" y="180" class="s" font-size="11.5" fill="#59636e">router and node images</text>
+<path d="M202,186 L220,186" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="223" y="138" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="224" y="139" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="241" y="160" class="s" font-size="14" fill="#1f2328" font-weight="600">Scan</text>
+<text x="241" y="180" class="s" font-size="11.5" fill="#59636e">Trivy; a fixable critical</text>
+<text x="241" y="196" class="s" font-size="11.5" fill="#59636e">blocks</text>
+<path d="M381,186 L399,186" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="402" y="138" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="403" y="139" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="420" y="160" class="s" font-size="14" fill="#1f2328" font-weight="600">SBOM</text>
+<text x="420" y="180" class="s" font-size="11.5" fill="#59636e">CycloneDX, from the</text>
+<text x="420" y="196" class="s" font-size="11.5" fill="#59636e">built image</text>
+<path d="M560,186 L578,186" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="581" y="138" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="582" y="139" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="599" y="160" class="s" font-size="14" fill="#1f2328" font-weight="600">Push</text>
+<text x="599" y="180" class="s" font-size="11.5" fill="#59636e">to GHCR, used only by</text>
+<text x="599" y="196" class="s" font-size="11.5" fill="#59636e">digest</text>
+<path d="M739,186 L757,186" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="760" y="138" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="761" y="139" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="778" y="160" class="s" font-size="14" fill="#1f2328" font-weight="600">Sign</text>
+<text x="778" y="180" class="s" font-size="11.5" fill="#59636e">cosign signature and a</text>
+<text x="778" y="196" class="s" font-size="11.5" fill="#59636e">signed SBOM</text>
+<text x="778" y="212" class="s" font-size="11.5" fill="#59636e">attestation</text>
+<rect x="24" y="268" width="912" height="150" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="294" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">CONFIG BUNDLE · EVERY MERGE TO MAIN</text>
+<rect x="44" y="306" width="200.75" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="45" y="307" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="62" y="328" class="s" font-size="14" fill="#1f2328" font-weight="600">Render</text>
+<text x="62" y="348" class="s" font-size="11.5" fill="#59636e">every config from network.yaml</text>
+<path d="M246.75,354 L264.75,354" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="267.75" y="306" width="200.75" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="268.75" y="307" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="285.75" y="328" class="s" font-size="14" fill="#1f2328" font-weight="600">Pack</text>
+<text x="285.75" y="348" class="s" font-size="11.5" fill="#59636e">reproducibly: fixed order, owner,</text>
+<text x="285.75" y="364" class="s" font-size="11.5" fill="#59636e">mode, time</text>
+<path d="M470.5,354 L488.5,354" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="491.5" y="306" width="200.75" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="492.5" y="307" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="509.5" y="328" class="s" font-size="14" fill="#1f2328" font-weight="600">Attest</text>
+<text x="509.5" y="348" class="s" font-size="11.5" fill="#59636e">GitHub build provenance</text>
+<path d="M694.25,354 L712.25,354" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="715.25" y="306" width="200.75" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="716.25" y="307" width="4" height="94" rx="2" fill="#8250df"/>
+<text x="733.25" y="328" class="s" font-size="14" fill="#1f2328" font-weight="600">Sign</text>
+<text x="733.25" y="348" class="s" font-size="11.5" fill="#59636e">cosign, keyless, in the public</text>
+<text x="733.25" y="364" class="s" font-size="11.5" fill="#59636e">Rekor log</text>
+<rect x="24" y="436" width="912" height="150" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="462" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">RELEASE · ON A VERSION TAG</text>
+<rect x="44" y="474" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="45" y="475" width="4" height="94" rx="2" fill="#1a7f37"/>
+<text x="62" y="496" class="s" font-size="14" fill="#1f2328" font-weight="600">Preconditions</text>
+<text x="62" y="516" class="s" font-size="11.5" fill="#59636e">on main, and main&#x27;s</text>
+<text x="62" y="532" class="s" font-size="11.5" fill="#59636e">gate passed for it</text>
+<path d="M202,522 L220,522" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="223" y="474" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="224" y="475" width="4" height="94" rx="2" fill="#1a7f37"/>
+<text x="241" y="496" class="s" font-size="14" fill="#1f2328" font-weight="600">Rebuild</text>
+<text x="241" y="516" class="s" font-size="11.5" fill="#59636e">from the tag; must</text>
+<text x="241" y="532" class="s" font-size="11.5" fill="#59636e">equal main&#x27;s bundle</text>
+<text x="241" y="548" class="s" font-size="11.5" fill="#59636e">byte for byte</text>
+<path d="M381,522 L399,522" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="402" y="474" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="403" y="475" width="4" height="94" rx="2" fill="#1a7f37"/>
+<text x="420" y="496" class="s" font-size="14" fill="#1f2328" font-weight="600">Record images</text>
+<text x="420" y="516" class="s" font-size="11.5" fill="#59636e">built for this commit;</text>
+<text x="420" y="532" class="s" font-size="11.5" fill="#59636e">signatures verified</text>
+<path d="M560,522 L578,522" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="581" y="474" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="582" y="475" width="4" height="94" rx="2" fill="#1a7f37"/>
+<text x="599" y="496" class="s" font-size="14" fill="#1f2328" font-weight="600">Checksums</text>
+<text x="599" y="516" class="s" font-size="11.5" fill="#59636e">SHA256SUMS, signed</text>
+<path d="M739,522 L757,522" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="760" y="474" width="156" height="96" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="761" y="475" width="4" height="94" rx="2" fill="#1a7f37"/>
+<text x="778" y="496" class="s" font-size="14" fill="#1f2328" font-weight="600">Publish</text>
+<text x="778" y="516" class="s" font-size="11.5" fill="#59636e">an immutable GitHub</text>
+<text x="778" y="532" class="s" font-size="11.5" fill="#59636e">release</text>
+<rect x="24" y="604" width="912" height="64" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="1"/>
+<text x="44" y="630" class="s" font-size="13.5" fill="#1a7f37" font-weight="650">Anyone can check a release, and prod checks every bundle and image before using it</text>
+<text x="44" y="650" class="m" font-size="12" fill="#1f2328">cosign verify-blob · sha256sum -c · gh attestation verify · cosign verify   (docs/verify.md)</text>
+<text x="936" y="690" class="s" font-size="10.5" fill="#818b98" text-anchor="end">drawn by scripts/diagrams.py</text>
+</svg>

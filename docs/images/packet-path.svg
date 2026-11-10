@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 704" width="960" height="704" role="img" aria-labelledby="t d">
+<title id="t">Inside a site router: the order rules apply in</title><desc id="d">rtr-a&#x27;s rendered nftables ruleset, in the order the kernel&#x27;s hooks meet a packet.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a818b98" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#818b98"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="703" rx="14" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#1f2328">Inside a site router: the order rules apply in</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#59636e">rtr-a&#x27;s rendered nftables ruleset, in the order the kernel&#x27;s hooks meet a packet.</text>
+<rect x="41" y="100" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="42" y="101" width="4" height="148" rx="2" fill="#59636e"/>
+<text x="59" y="122" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">INGRESS</text>
+<text x="59" y="143" class="s" font-size="14" fill="#1f2328" font-weight="600">Packet arrives</text>
+<text x="59" y="163" class="s" font-size="12" fill="#59636e">From the ISP on eth1, a zone</text>
+<text x="59" y="179.5" class="s" font-size="12" fill="#59636e">on eth2–eth6, or the tunnel on</text>
+<text x="59" y="196" class="s" font-size="12" fill="#59636e">wg0</text>
+<path d="M243,175 L264,175" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="267" y="100" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="268" y="101" width="4" height="148" rx="2" fill="#bc4c00"/>
+<text x="285" y="122" class="s" font-size="10.5" fill="#bc4c00" font-weight="600" letter-spacing="0.06em">1 · INGRESS HOOK</text>
+<text x="285" y="143" class="s" font-size="14" fill="#1f2328" font-weight="600">Edge filter</text>
+<text x="285" y="163" class="s" font-size="12" fill="#59636e">On eth1, before connection</text>
+<text x="285" y="179.5" class="s" font-size="12" fill="#59636e">tracking: drops private,</text>
+<text x="285" y="196" class="s" font-size="12" fill="#59636e">loopback and own-prefix</text>
+<text x="285" y="212.5" class="s" font-size="12" fill="#59636e">sources</text>
+<path d="M469,175 L490,175" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="493" y="100" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="494" y="101" width="4" height="148" rx="2" fill="#bc4c00"/>
+<text x="511" y="122" class="s" font-size="10.5" fill="#bc4c00" font-weight="600" letter-spacing="0.06em">2 · PREROUTING</text>
+<text x="511" y="143" class="s" font-size="14" fill="#1f2328" font-weight="600">Reverse-path check</text>
+<text x="511" y="163" class="s" font-size="12" fill="#59636e">On zone interfaces: drops a</text>
+<text x="511" y="179.5" class="s" font-size="12" fill="#59636e">source that would not be</text>
+<text x="511" y="196" class="s" font-size="12" fill="#59636e">routed back out the way it</text>
+<text x="511" y="212.5" class="s" font-size="12" fill="#59636e">came in</text>
+<path d="M695,175 L716,175" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="719" y="100" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="720" y="101" width="4" height="148" rx="2" fill="#8250df"/>
+<text x="737" y="122" class="s" font-size="10.5" fill="#8250df" font-weight="600" letter-spacing="0.06em">3 · PREROUTING NAT</text>
+<text x="737" y="143" class="s" font-size="14" fill="#1f2328" font-weight="600">Destination NAT</text>
+<text x="737" y="163" class="s" font-size="12" fill="#59636e">Published services on</text>
+<text x="737" y="179.5" class="s" font-size="12" fill="#59636e">198.51.100.65: 443 → haproxy,</text>
+<text x="737" y="196" class="s" font-size="12" fill="#59636e">53 → ns1</text>
+<rect x="41" y="296" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="42" y="297" width="4" height="148" rx="2" fill="#59636e"/>
+<text x="59" y="318" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">EGRESS</text>
+<text x="59" y="339" class="s" font-size="14" fill="#1f2328" font-weight="600">Packet leaves</text>
+<text x="59" y="359" class="s" font-size="12" fill="#59636e">To the ISP, a zone, or the</text>
+<text x="59" y="375.5" class="s" font-size="12" fill="#59636e">tunnel</text>
+<rect x="267" y="296" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="268" y="297" width="4" height="148" rx="2" fill="#8250df"/>
+<text x="285" y="318" class="s" font-size="10.5" fill="#8250df" font-weight="600" letter-spacing="0.06em">6 · POSTROUTING NAT</text>
+<text x="285" y="339" class="s" font-size="14" fill="#1f2328" font-weight="600">Source NAT</text>
+<text x="285" y="359" class="s" font-size="12" fill="#59636e">Internet-bound traffic from</text>
+<text x="285" y="375.5" class="s" font-size="12" fill="#59636e">LAN-A, SVC leaves as</text>
+<text x="285" y="392" class="s" font-size="12" fill="#59636e">198.51.100.66</text>
+<path d="M265,371 L244,371" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="493" y="296" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="494" y="297" width="4" height="148" rx="2" fill="#cf222e"/>
+<text x="511" y="318" class="s" font-size="10.5" fill="#cf222e" font-weight="600" letter-spacing="0.06em">5 · FORWARD HOOK</text>
+<text x="511" y="339" class="s" font-size="14" fill="#1f2328" font-weight="600">Forward filter</text>
+<text x="511" y="359" class="s" font-size="12" fill="#59636e">Replies pass first, invalid</text>
+<text x="511" y="375.5" class="s" font-size="12" fill="#59636e">packets drop, then the allow</text>
+<text x="511" y="392" class="s" font-size="12" fill="#59636e">list, pinned to interfaces.</text>
+<text x="511" y="408.5" class="s" font-size="12" fill="#59636e">Everything else is counted and</text>
+<text x="511" y="425" class="s" font-size="12" fill="#59636e">dropped</text>
+<path d="M491,371 L470,371" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="719" y="296" width="200" height="150" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="720" y="297" width="4" height="148" rx="2" fill="#0969da"/>
+<text x="737" y="318" class="s" font-size="10.5" fill="#0969da" font-weight="600" letter-spacing="0.06em">4 · ROUTING</text>
+<text x="737" y="339" class="s" font-size="14" fill="#1f2328" font-weight="600">Routing decision</text>
+<text x="737" y="359" class="s" font-size="12" fill="#59636e">BGP and connected routes</text>
+<text x="737" y="375.5" class="s" font-size="12" fill="#59636e">choose the exit; packets for</text>
+<text x="737" y="392" class="s" font-size="12" fill="#59636e">the router itself go to its input</text>
+<text x="737" y="408.5" class="s" font-size="12" fill="#59636e">filter</text>
+<path d="M717,371 L696,371" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<path d="M819,250 L819,293" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="719" y="492" width="200" height="172" rx="10" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="720" y="493" width="4" height="170" rx="2" fill="#cf222e"/>
+<text x="737" y="514" class="s" font-size="10.5" fill="#cf222e" font-weight="600" letter-spacing="0.06em">INPUT HOOK</text>
+<text x="737" y="535" class="s" font-size="14" fill="#1f2328" font-weight="600">To the router itself</text>
+<text x="737" y="555" class="s" font-size="12" fill="#59636e">Only BGP from its two peers,</text>
+<text x="737" y="571.5" class="s" font-size="12" fill="#59636e">WireGuard on UDP 51820, SSH</text>
+<text x="737" y="588" class="s" font-size="12" fill="#59636e">from admin and ping from</text>
+<text x="737" y="604.5" class="s" font-size="12" fill="#59636e">inside. Everything else is</text>
+<text x="737" y="621" class="s" font-size="12" fill="#59636e">dropped</text>
+<path d="M819,446 L819,489" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a818b98)"/>
+<rect x="41" y="492" width="654" height="172" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="61" y="520" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">WHAT GATE 1 ASSERTS ON THIS RULESET, AS NFTABLES LOADED IT</text>
+<circle cx="70" cy="544" r="7" fill="#1a7f37"/>
+<path d="M66.4,544.2 L69,546.8 L73.8,541.4" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86" y="548" class="s" font-size="12.5" fill="#1f2328">The input and forward hooks have a drop policy, and forwarding accepts replies before anything else</text>
+<circle cx="70" cy="571" r="7" fill="#1a7f37"/>
+<path d="M66.4,571.2 L69,573.8 L73.8,568.4" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86" y="575" class="s" font-size="12.5" fill="#1f2328">Forwarding never drops ICMP destination-unreachable, so path MTU discovery keeps working</text>
+<circle cx="70" cy="598" r="7" fill="#1a7f37"/>
+<path d="M66.4,598.2 L69,600.8 L73.8,595.4" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86" y="602" class="s" font-size="12.5" fill="#1f2328">The edge filter is on eth1&#x27;s ingress hook and drops every private and own source prefix</text>
+<circle cx="70" cy="625" r="7" fill="#1a7f37"/>
+<path d="M66.4,625.2 L69,627.8 L73.8,622.4" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="86" y="629" class="s" font-size="12.5" fill="#1f2328">The reverse-path check covers every zone interface, with no accept before it</text>
+<text x="936" y="690" class="s" font-size="10.5" fill="#818b98" text-anchor="end">from network.yaml and the rendered ruleset&#x27;s structure · drawn by scripts/diagrams.py</text>
+</svg>

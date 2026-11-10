@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Run one week-1 lab end to end and write a JSON result.
+"""Run one feasibility lab end to end and write a JSON result.
 
   render -> (keys) -> containerlab deploy -> wait for convergence -> checks -> evidence -> destroy
 
 Usage:
-  python3 week1/lab.py --lab w1-bgp --out results/A-run1.json [--fault W1-F] [--evidence DIR]
+  python3 feasibility/lab.py --lab feas-bgp --out results/A-run1.json [--fault FEAS-F] [--evidence DIR]
 
 The timed window is the one docs/method.md defines for test A: from the start of
 `containerlab deploy` to the end of the checks. Exit code 0 means every check passed.
-Needs: docker, containerlab (run through sudo), and the router image built as packetproof/router:w1.
+Needs: docker, containerlab (run through sudo), and the router image built as packetproof/router:feas.
 """
 
 from __future__ import annotations
