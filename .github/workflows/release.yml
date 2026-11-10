@@ -1,0 +1,123 @@
+name: release
+
+# Pushing a tag v* publishes a GitHub release in which anyone can check every file (docs/verify.md):
+#   - the config bundle of the tagged commit, rebuilt here with `make bundle`, and required to be
+#     byte-identical to the bundle that bundle.yml built when that commit landed on main
+#   - a build provenance attestation and a cosign signature for that bundle
+#   - the digests of the two lab images in use on main, after their signatures are verified, and
+#     their CycloneDX SBOMs, taken from the signed SBOM attestations rather than regenerated
+#   - SHA256SUMS over all of it, signed with cosign, then checked here the way a user would
+# The tag must point at a commit on main and have notes in docs/releases/<tag>.md.
+# Run by hand on main, it does all of this as a dry run and publishes nothing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write      # create the release
+      id-token: write      # keyless cosign signatures and the attestation
+      attestations: write
+      actions: read        # find bundle.yml's run for the tagged commit
+      packages: read       # pull the images to read their digests and attestations
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NAME: ${{ github.ref_name }}
+      OWNER: ${{ github.repository_owner }}
+      REPO: ${{ github.repository }}
+      IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      IMAGES_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/images.yml@refs/heads/main
+      OIDC: https://token.actions.githubusercontent.com
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The commit is on main; a tag has release notes
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          if [ "$IS_TAG" = "true" ]; then test -s "docs/releases/$NAME.md"; fi
+      - name: Install Python dependencies, hash-locked
+        run: make venv VENV="$RUNNER_TEMP/venv"
+      - name: Rebuild the config bundle; it must match main's byte for byte
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          make bundle VENV="$RUNNER_TEMP/venv" BUNDLE="dist/packetproof-config-$NAME.tgz"
+          run=$(gh run list -R "$REPO" --workflow bundle.yml --commit "$GITHUB_SHA" --status success \
+            --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -z "$run" ]; then echo "bundle.yml has no successful run for $GITHUB_SHA" >&2; exit 1; fi
+          gh run download "$run" -R "$REPO" -n config-bundle -D "$RUNNER_TEMP/main-bundle"
+          here=$(sha256sum "dist/packetproof-config-$NAME.tgz" | cut -d' ' -f1)
+          main=$(sha256sum "$RUNNER_TEMP/main-bundle/packetproof-config-$GITHUB_SHA.tgz" | cut -d' ' -f1)
+          {
+            echo "### Reproducible bundle"
+            echo "- rebuilt here: \`$here\`"
+            echo "- built by bundle.yml run $run when $GITHUB_SHA landed on main: \`$main\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$here" != "$main" ]; then echo "the rebuilt bundle differs from main's" >&2; exit 1; fi
+          echo "$GITHUB_SHA $run $here" > dist/bundle-source.txt
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+      - name: Images - verify their signatures, record their digests, extract their signed SBOMs
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for img in router node; do
+            ref="ghcr.io/$OWNER/packetproof-$img"
+            docker pull -q "$ref:main" > /dev/null
+            digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$ref:main" | cut -d@ -f2)
+            cosign verify --certificate-identity "$IMAGES_IDENTITY" --certificate-oidc-issuer "$OIDC" \
+              "$ref@$digest" > /dev/null
+            cosign verify-attestation --type cyclonedx --certificate-identity "$IMAGES_IDENTITY" \
+              --certificate-oidc-issuer "$OIDC" "$ref@$digest" > "$RUNNER_TEMP/att-$img.json"
+            jq -rs '.[0].payload' "$RUNNER_TEMP/att-$img.json" | base64 -d | jq '.predicate' \
+              > "dist/packetproof-$img-sbom.cdx.json"
+            jq -e '.bomFormat == "CycloneDX" and (.components | length) > 0' \
+              "dist/packetproof-$img-sbom.cdx.json" > /dev/null
+            echo "$ref@$digest" | tee -a dist/images.txt
+          done
+      - name: Sign the bundle
+        run: cosign sign-blob --yes --bundle "dist/packetproof-config-$NAME.sigstore.json" "dist/packetproof-config-$NAME.tgz" > /dev/null
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: ${{ env.IS_TAG == 'true' }}
+        with:
+          subject-path: dist/packetproof-config-${{ github.ref_name }}.tgz
+      - name: Checksums, signed, then checked the way a user would (docs/verify.md)
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS > /dev/null
+          ident="https://github.com/$REPO/.github/workflows/release.yml@$GITHUB_REF"
+          cosign verify-blob --bundle SHA256SUMS.sigstore.json --certificate-identity "$ident" \
+            --certificate-oidc-issuer "$OIDC" SHA256SUMS
+          sha256sum -c SHA256SUMS
+          cosign verify-blob --bundle "packetproof-config-$NAME.sigstore.json" --certificate-identity "$ident" \
+            --certificate-oidc-issuer "$OIDC" "packetproof-config-$NAME.tgz"
+          if [ "$IS_TAG" = "true" ]; then
+            gh attestation verify "packetproof-config-$NAME.tgz" -R "$REPO" \
+              --signer-workflow "$REPO/.github/workflows/release.yml"
+          fi
+          ls -l
+      - name: Publish the release
+        if: ${{ env.IS_TAG == 'true' }}
+        run: |
+          gh release create "$NAME" dist/* -R "$REPO" --verify-tag --title "PacketProof $NAME" \
+            --notes-file "docs/releases/$NAME.md"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: release-${{ github.ref_name }}
+          path: dist/
+          retention-days: 30

@@ -32,7 +32,7 @@ gates against 30 deliberately broken changes and 12 attack paths, and publishes 
    | about 1 minute        | about 6 minutes       | about 22 minutes, 20 runners   |
    | schema, Conftest on   | the whole network in  | each of 30 planted faults      |
    | intent and on loaded  | containerlab on the   | through Gates 1 and 2, next to |
-   | nftables, vtysh,      | runner; 119 tests of  | an unfaulted baseline; 12      |
+   | nftables, vtysh,      | runner; 123 tests of  | an unfaulted baseline; 12      |
    | Batfish; the plan     | routing, firewall,    | attack paths; scorecard to     |
    | (frr-reload --test)   | NAT, DNS, TLS, MTU,   | GitHub Pages                   |
    | posted on the PR      | proxy, monitoring     |                                |
@@ -86,7 +86,9 @@ Every Action is pinned to a commit SHA, and the repository refuses unpinned ones
 workflow token is read-only, and each job asks only for what it needs. zizmor and OpenSSF Scorecard
 audit the workflows; Gitleaks scans the whole history. Images are pinned by digest, scanned with
 Trivy, given an SBOM and signed with cosign. Config bundles carry a GitHub artifact attestation and a
-cosign signature, and prod verifies both before applying anything. WireGuard private keys are
+cosign signature, and prod verifies both before applying anything. Each release is rebuilt from
+its tag, must match main's bundle byte for byte, and ships signed checksums and the images' signed
+SBOMs ([verify one yourself](docs/verify.md)). WireGuard private keys are
 generated inside each router and never leave it. SOPS with age is proved by a key-rotation test.
 [Threat model](docs/threat-model.md).
 
@@ -141,11 +143,13 @@ Each of these was found by a check, fixed in a commit that says what it saw, and
 
 ## Documents
 
+- [Why this project, and why this design](docs/why.md), with sources
 - [Method](docs/method.md): the rules, faults, attack paths and invariants, committed before any test
 - [Week 1](docs/go-no-go.md): go/no-go checks, with every run linked, including the failures
 - [Scorecard](docs/scorecard.md): every Gate 3 run and how each fault was graded
 - [What each gate cannot see](docs/limits.md), [the prod change path](docs/prod.md),
-  [secrets and their rotation](docs/secrets.md),
+  [secrets and their rotation](docs/secrets.md), [verify a release](docs/verify.md),
+  [interview map](docs/interview.md),
   [threat model](docs/threat-model.md), [address plan](docs/address-plan.md)
 
 ## License
