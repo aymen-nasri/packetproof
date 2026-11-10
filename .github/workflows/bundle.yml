@@ -24,16 +24,9 @@ jobs:
           persist-credentials: false
       - name: Install Python dependencies
         run: make venv VENV="$RUNNER_TEMP/venv"
-      - name: Render and pack deterministically
+      - name: Render and pack reproducibly (make bundle; release.yml rebuilds it and must get the same bytes)
         run: |
-          set -o pipefail  # tar | gzip: a failed tar must fail the step
-          make render VENV="$RUNNER_TEMP/venv" RENDER=out/lab
-          echo "$GITHUB_SHA" > out/lab/COMMIT
-          # Reproducible: every file gets the commit's time (SOURCE_DATE_EPOCH), not 0. NSD will
-          # not load a zone file whose mtime is 0 (prod run 42827614277).
-          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
-          tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner -C out -cf - lab \
-            | gzip -n > "packetproof-config-$GITHUB_SHA.tgz"
+          make bundle VENV="$RUNNER_TEMP/venv" BUNDLE="packetproof-config-$GITHUB_SHA.tgz"
           sha256sum "packetproof-config-$GITHUB_SHA.tgz" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
