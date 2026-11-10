@@ -8,6 +8,7 @@ the lab CA's root certificate and the test certificates used by Gate 2.
 from __future__ import annotations
 
 import ipaddress
+import json
 
 from .model import Network
 
@@ -105,12 +106,17 @@ def start_script(net: Network, host: dict) -> tuple[str, dict[str, str]]:
     elif role == "monitor":
         files["blackbox.yml"] = BLACKBOX_YML
         files["prometheus.yml"] = prometheus_yml(net)
+        files.update(grafana_files())
         lines += [
             _wait_for("/shared/pki/root_ca.crt"),
             'BB="$(command -v blackbox_exporter || command -v prometheus-blackbox-exporter)"',
             'nohup "$BB" --config.file=/pp/blackbox.yml --web.listen-address=127.0.0.1:9115 >/tmp/blackbox.log 2>&1 &',
             "nohup prometheus --config.file=/pp/prometheus.yml --storage.tsdb.path=/tmp/prom "
             "--web.listen-address=127.0.0.1:9090 >/tmp/prometheus.log 2>&1 &",
+            # Grafana: no admin account, anonymous read-only, localhost only, provisioned from /pp.
+            "mkdir -p /tmp/grafana/log /tmp/grafana/plugins",
+            'if command -v grafana >/dev/null; then GF="grafana server"; else GF="grafana-server"; fi',
+            "nohup $GF --homepath /usr/share/grafana --config /pp/grafana.ini >/tmp/grafana.log 2>&1 &",
         ]
     lines += ["touch /tmp/pp-ready"]
     return "\n".join(lines) + "\n", files
@@ -289,6 +295,83 @@ modules:
       query_type: A
       valid_rcodes: [NOERROR]
 """
+
+
+GRAFANA_INI = """\
+; Rendered by packetproof: a read-only Grafana for the lab, reachable only from the monitor host.
+[paths]
+data = /tmp/grafana
+logs = /tmp/grafana/log
+plugins = /tmp/grafana/plugins
+provisioning = /pp/grafana
+[server]
+http_addr = 127.0.0.1
+http_port = 3000
+[security]
+disable_initial_admin_creation = true
+[auth]
+disable_login_form = true
+[auth.anonymous]
+enabled = true
+org_role = Viewer
+[analytics]
+reporting_enabled = false
+check_for_updates = false
+check_for_plugin_updates = false
+[news]
+news_feed_enabled = false
+"""
+
+GRAFANA_DATASOURCE = """\
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://127.0.0.1:9090
+    isDefault: true
+"""
+
+GRAFANA_PROVIDER = """\
+apiVersion: 1
+providers:
+  - name: packetproof
+    type: file
+    disableDeletion: true
+    options:
+      path: /pp/grafana/dashboards/json
+"""
+
+
+def grafana_dashboard() -> str:
+    ds = {"type": "prometheus", "uid": "prometheus"}
+
+    def panel(kind, title, expr, x, y, w, legend="{{job}}", unit=None):
+        p = {"type": kind, "title": title, "datasource": ds, "gridPos": {"x": x, "y": y, "w": w, "h": 7},
+             "targets": [{"refId": "A", "datasource": ds, "expr": expr, "legendFormat": legend}]}
+        if unit:
+            p["fieldConfig"] = {"defaults": {"unit": unit}, "overrides": []}
+        return p
+
+    dash = {
+        "uid": "packetproof-probes", "title": "PacketProof probes", "schemaVersion": 39, "version": 1,
+        "refresh": "5s", "time": {"from": "now-15m", "to": "now"}, "tags": ["packetproof"],
+        "panels": [
+            panel("stat", "Probe success (1 = up)", "probe_success", 0, 0, 12),
+            panel("stat", "Hours until the www certificate expires",
+                  '(probe_ssl_earliest_cert_expiry{job="www-tls-expiry"} - time()) / 3600', 12, 0, 12, "hours", "h"),
+            panel("timeseries", "Probe duration", "probe_duration_seconds", 0, 7, 24, unit="s"),
+        ],
+    }
+    return json.dumps(dash, indent=2) + "\n"
+
+
+def grafana_files() -> dict[str, str]:
+    return {"grafana.ini": GRAFANA_INI,
+            "grafana/datasources/prometheus.yaml": GRAFANA_DATASOURCE,
+            "grafana/dashboards/packetproof.yaml": GRAFANA_PROVIDER,
+            "grafana/dashboards/json/packetproof.json": grafana_dashboard()}
 
 
 def prometheus_yml(net: Network) -> str:
