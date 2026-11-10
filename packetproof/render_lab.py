@@ -35,9 +35,6 @@ def router_up_script(net: Network, router: str) -> str:
         f"# Rendered by packetproof for {router}. Do not edit by hand.",
         "exec >/tmp/pp-up.log 2>&1",
         "set -eux",
-        "# containerlab's management network gives every node a default route via eth0. The lab",
-        "# must never use it (traffic would leave the lab), so it goes; BGP brings the ISP's default.",
-        "ip route del default dev eth0 || true",
     ]
     site = net.site_by_router.get(router)
     if site:
@@ -45,6 +42,8 @@ def router_up_script(net: Network, router: str) -> str:
         port = net.data["tunnel"]["port"]
         lines += [
             "nft -f /pp/ruleset.nft",
+            "# Forwarding starts only now, with the firewall in place (it is off in the topology).",
+            "echo 1 > /proc/sys/net/ipv4/ip_forward",
             "# The private key is generated here and never leaves this router: the lab runner",
             "# reads only the public key (wg show wg0 public-key) and hands it to the peer.",
             "# It lives under /etc/wireguard because the runner host's AppArmor profile for `wg`",
@@ -87,8 +86,13 @@ def topology(net: Network) -> str:
            "topology:", "  nodes:"]
     routers = [s["router"] for s in sites] + [isp["name"]]
     for r in routers:
-        out += [f"    {r}:", "      kind: linux", f"      image: {ROUTER_IMAGE}",
-                "      sysctls:", "        net.ipv4.ip_forward: 1", "      binds:",
+        # No management network (review of v1.0.0): containerlab would give every node an eth0
+        # on one shared network, a path between nodes that no zone firewall sees. Nodes are
+        # reached with `docker exec` only. Site routers start with forwarding off and turn it on
+        # in up.sh after their firewall is loaded, so they never forward unfiltered.
+        fwd = 1 if r == isp["name"] else 0
+        out += [f"    {r}:", "      kind: linux", f"      image: {ROUTER_IMAGE}", "      network-mode: none",
+                "      sysctls:", f"        net.ipv4.ip_forward: {fwd}", "      binds:",
                 f"        - routers/{r}/frr.conf:/etc/frr/frr.conf",
                 f"        - routers/{r}/daemons:/etc/frr/daemons",
                 f"        - routers/{r}/vtysh.conf:/etc/frr/vtysh.conf",
@@ -99,7 +103,7 @@ def topology(net: Network) -> str:
     ca = net.data["pki"]["ca"]
     for h in net.data["hosts"]:
         mode = "rw" if h["name"] == ca else "ro"
-        out += [f"    {h['name']}:", "      kind: linux", f"      image: {NODE_IMAGE}",
+        out += [f"    {h['name']}:", "      kind: linux", f"      image: {NODE_IMAGE}", "      network-mode: none",
                 # Hosts are unprivileged: they only need to set their own address and routes.
                 "      privileged: false", "      cap-add:", "        - NET_ADMIN", "      binds:",
                 f"        - hosts/{h['name']}:/pp:ro", f"        - shared:/shared:{mode}",

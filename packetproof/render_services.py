@@ -54,8 +54,13 @@ def _prelude(net: Network, host: dict) -> list[str]:
         # hosts file rendered from the inside view.
         lines.append(": > /etc/resolv.conf")
         if zone != "outside":
+            # Only the names this host's own software looks up: a compromised DMZ host should not
+            # be handed a map of the network (review of v1.0.0). HAProxy's backends are addresses;
+            # its ACME client needs the CA's name, and nothing else needs any.
+            needed = {net.host_address(net.data["pki"]["ca"])} if host["role"] == "proxy" else set()
             for name, addr in inside_records(net).items():
-                lines.append(f"echo '{addr} {name}' >> /etc/hosts")
+                if addr in needed:
+                    lines.append(f"echo '{addr} {name}' >> /etc/hosts")
     else:
         lines.append(f"echo 'nameserver {resolver['address']}' > /etc/resolv.conf")
     if host["role"] != "outside":
@@ -118,8 +123,14 @@ def start_script(net: Network, host: dict) -> tuple[str, dict[str, str]]:
             'if command -v grafana >/dev/null; then GF="grafana server"; else GF="grafana-server"; fi',
             "nohup $GF --homepath /usr/share/grafana --config /pp/grafana.ini >/tmp/grafana.log 2>&1 &",
         ]
+    # Ready means the service answers, not that it was started in the background.
+    lines += [_wait_for_port(p) for p in READY_PORTS.get(role, [])]
     lines += ["touch /tmp/pp-ready"]
     return "\n".join(lines) + "\n", files
+
+
+# Local ports each role must answer on before the host writes /tmp/pp-ready.
+READY_PORTS = {"app": [8080], "db": [5432], "outside": [80, 443, 4444], "monitor": [9115, 9090, 3000]}
 
 
 def unbound_conf(net: Network) -> str:

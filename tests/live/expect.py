@@ -26,6 +26,11 @@ RTR_A_DMZ = "172.16.20.1"
 RTR_B_LAN = "172.24.10.1"
 RTR_A_DB = "172.16.40.1"
 
+# Every host's one planned address (docs/address-plan.md). Nothing else may be configured on it.
+HOST_ADDRESSES = {"client-a": CLIENT_A, "admin": ADMIN, "mon": "172.16.10.30", "haproxy": HAPROXY,
+                  "ns1": NS1, "app1": APP1, "app2": APP2, "db": DB, "ca": CA, "resolver": RESOLVER,
+                  "client-b": CLIENT_B, "outside": OUTSIDE}
+
 SITE_A_PRIVATE = ["172.16.10.0/24", "172.16.20.0/24", "172.16.30.0/24", "172.16.40.0/24",
                   "172.16.50.0/24", "172.16.255.1/32"]
 SITE_B_PRIVATE = ["172.24.10.0/24", "172.24.255.1/32"]

@@ -8,7 +8,10 @@ Layout of each ruleset:
   table ip nat         port-forwards (DNAT) and source NAT for internet-bound traffic
 
 Zones are interface-based, as in most zone firewalls: a local zone is the set of router
-interfaces labelled with it. Remote zones (across the tunnel) are matched by wg0 plus address.
+interfaces labelled with it. Remote zones and hosts (across the tunnel) are matched by wg0 plus
+address, in both directions, so a rule for the other site can never match traffic that would
+leave by the uplink in clear (INV-07). The other site's users reach the internet through their own
+router and NAT, so this router renders no transit rule for them (INV-04).
 """
 
 from __future__ import annotations
@@ -45,14 +48,46 @@ def _src(net: Network, router: str, ep: str) -> list[_Endpoint]:
             return [_Endpoint(f"iifname {_quoted_set(ifs)}")] if ifs else []
         return [_Endpoint(f'iifname "{TUNNEL_IF}" ip saddr {net.zones[name]["prefix"]}')]
     if kind == "host":
-        return [_Endpoint(f"ip saddr {net.host_address(name)}")]
+        return [_Endpoint(f"{_host_iface(net, router, name, 'iifname')} ip saddr {net.host_address(name)}".strip())]
     if kind == "router":
-        return [_Endpoint(f"ip saddr {_set(net.router_addresses(name))}")]
+        if net.site_by_router[name]["name"] == site["name"]:
+            return [_Endpoint(f"ip saddr {_set(net.router_addresses(name))}")]
+        return [_Endpoint(f'iifname "{TUNNEL_IF}" ip saddr {_set(net.router_addresses(name))}')]
     if kind == "internet":
         return [_Endpoint(f'iifname "{UPLINK_IF}"')]
     if kind == "all":
-        return [_Endpoint(f"ip saddr {_set(net.internal_prefixes())}")]
+        other = net.other_site(site["name"])["name"]
+        return [_Endpoint(f"ip saddr {_set(net.site_prefixes(site['name']))}"),
+                _Endpoint(f'iifname "{TUNNEL_IF}" ip saddr {_set(net.site_prefixes(other))}')]
     raise ValueError(ep)
+
+
+def _host_iface(net: Network, router: str, name: str, which: str) -> str:
+    """The interface match for a host as seen from `router`: its zone's interfaces at this site,
+    the tunnel for a host at the other site, the uplink for a host outside."""
+    zone = net.hosts[name]["zone"]
+    site = net.zone_site.get(zone)
+    if site is None:
+        return f'{which} "{UPLINK_IF}"'
+    if site == net.site_by_router[router]["name"]:
+        ifs = net.zone_ifaces(router, zone)
+        # A zone with no interface of its own (fault F18 relabels one) gets no interface match,
+        # as before: the address alone still names the host.
+        return f"{which} {_quoted_set(ifs)}" if ifs else ""
+    return f'{which} "{TUNNEL_IF}"'
+
+
+def _remote(net: Network, router: str, ep: str) -> bool:
+    """True when the endpoint lives at the other site (or is the other site's router)."""
+    site = net.site_by_router[router]["name"]
+    kind, _, name = ep.partition(":")
+    if kind == "zone":
+        return net.zone_site[name] != site
+    if kind == "host":
+        return net.zone_site.get(net.hosts[name]["zone"], site) != site
+    if kind == "router":
+        return net.site_by_router[name]["name"] != site
+    return False
 
 
 def _dst(net: Network, router: str, ep: str) -> list[_Endpoint]:
@@ -64,18 +99,20 @@ def _dst(net: Network, router: str, ep: str) -> list[_Endpoint]:
             return [_Endpoint(f"oifname {_quoted_set(ifs)}")] if ifs else []
         return [_Endpoint(f'oifname "{TUNNEL_IF}" ip daddr {net.zones[name]["prefix"]}')]
     if kind == "host":
-        if net.hosts[name]["zone"] == "outside":
-            return [_Endpoint(f'oifname "{UPLINK_IF}" ip daddr {net.host_address(name)}')]
-        return [_Endpoint(f"ip daddr {net.host_address(name)}")]
+        return [_Endpoint(f"{_host_iface(net, router, name, 'oifname')} ip daddr {net.host_address(name)}".strip())]
     if kind == "router":
         if name == router:
             return [_Endpoint(None, to_router=True)]
-        return [_Endpoint(f"ip daddr {_set(net.router_addresses(name))}")]
+        return [_Endpoint(f'oifname "{TUNNEL_IF}" ip daddr {_set(net.router_addresses(name))}')]
     if kind == "internet":
         return [_Endpoint(f'oifname "{UPLINK_IF}"')]
     if kind == "all":
-        # Every internal host and every site router (the outside host and the ISP are not ours).
-        return [_Endpoint(f"ip daddr {_set(net.internal_prefixes())}"), _Endpoint(None, to_router=True)]
+        # Every internal host and every site router (the outside host and the ISP are not ours):
+        # this site's prefixes on its own interfaces, the other site's only through the tunnel.
+        other = net.other_site(site["name"])["name"]
+        return [_Endpoint(f"oifname != {_quoted_set([UPLINK_IF, TUNNEL_IF])} ip daddr {_set(net.site_prefixes(site['name']))}"),
+                _Endpoint(f'oifname "{TUNNEL_IF}" ip daddr {_set(net.site_prefixes(other) + [net.data["tunnel"]["prefix"]])}'),
+                _Endpoint(None, to_router=True)]
     raise ValueError(ep)
 
 
@@ -96,8 +133,15 @@ def flow_rules(net: Network, router: str) -> tuple[list[str], list[str]]:
     for flow in net.data["flows"]:
         for s_ep in flow["from"]:
             for d_ep in flow["to"]:
+                if _remote(net, router, s_ep) and (d_ep == "internet" or d_ep.startswith("host:")
+                                                  and net.hosts[d_ep[5:]]["zone"] == "outside"):
+                    continue  # the other site's own router carries (and NATs) that traffic
+                if _remote(net, router, s_ep) and _remote(net, router, d_ep):
+                    continue  # both ends at the other site: never transits this router
                 for s in _src(net, router, s_ep):
                     for d in _dst(net, router, d_ep):
+                        if (s.match or "").startswith(f'iifname "{TUNNEL_IF}"') and                                 (d.match or "").startswith(f'oifname "{TUNNEL_IF}"'):
+                            continue  # in from the tunnel and straight back out: never needed
                         for p in _ports(flow):
                             parts = [x for x in (s.match, d.match, p) if x]
                             rule = " ".join(parts) + f' accept comment "{flow["name"]}"'

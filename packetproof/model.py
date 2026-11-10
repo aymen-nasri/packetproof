@@ -104,6 +104,11 @@ class Network:
         out.append(self.data["tunnel"]["prefix"])
         return out
 
+    def site_prefixes(self, site_name: str) -> list[str]:
+        """The private prefixes one site owns: its zones and its router's loopback."""
+        site = next(s for s in self.data["sites"] if s["name"] == site_name)
+        return [z["prefix"] for z in site["zones"]] + [site["loopback"]]
+
     def router_addresses(self, router: str) -> list[str]:
         site = self.site_by_router[router]
         addrs = [site["loopback"].split("/")[0], site["wireguard"]["address"].split("/")[0]]
