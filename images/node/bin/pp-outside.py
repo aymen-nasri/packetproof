@@ -31,6 +31,7 @@ def serve(port: int) -> None:
                         "-out", "/tmp/o.crt", "-subj", "/CN=www.example.net", "-days", "2"],
                        check=True, capture_output=True)
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2  # CodeQL py/insecure-protocol: no TLS 1.0 or 1.1
         ctx.load_cert_chain("/tmp/o.crt", "/tmp/o.key")
         srv.socket = ctx.wrap_socket(srv.socket, server_side=True)
     srv.serve_forever()
