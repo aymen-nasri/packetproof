@@ -47,6 +47,23 @@ the control works. Invariants (INV), attack paths (AP) and planted faults (F) ar
 | An edited config bundle | provenance attestation and cosign signature, verified before apply | prod.yml step 2: a tampered bundle is refused |
 | Secrets readable after a key is retired | SOPS + age with rotation | secrets.yml rotation test |
 
+## OpenSSF Scorecard checks that stay low, and why
+
+Scorecard runs on every push to `main` and posts its findings as code-scanning alerts. These stay
+open on purpose, because closing them honestly is not possible for this repository:
+
+| Check | Why it stays low |
+|---|---|
+| Code-Review | One maintainer. Every change goes through a pull request with five required checks, but nobody else approves it, and approving your own pull request is not a review. |
+| Branch-Protection | Same reason: the ruleset on `main` requires a pull request and the checks, and forbids force pushes and deletion, but requires no approving review. |
+| Maintained | The repository is less than 90 days old. |
+| CII-Best-Practices | The OpenSSF Best Practices badge needs the owner to register the project at bestpractices.dev. Not done. |
+| Fuzzing | No fuzzer. The generator's only input is this repository's own `network.yaml`, validated by a JSON Schema in Gate 1. |
+| SAST | CodeQL was added after most of the history was written; Scorecard counts the share of recent commits that a SAST tool checked, which rises as new commits land. |
+
+CodeQL's own alerts are fixed, not left open: its one finding so far (a test server that accepted
+TLS 1.0 and 1.1, `py/insecure-protocol`) was fixed by setting TLS 1.2 as the minimum.
+
 ## What this model does not cover
 
 - **The runner itself.** GitHub's hosted runners are trusted. A compromised runner could fake every
