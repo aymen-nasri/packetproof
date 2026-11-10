@@ -14,9 +14,9 @@ isp:
   outside:
     prefix: 192.0.2.0/24
     gateway: 192.0.2.1
-    # The ISP's link towards the outside user carries only 1400 bytes, on the ISP's side: the
-    # user still advertises a 1460-byte MSS, so large replies through NAT need path MTU
-    # discovery (ICMP "fragmentation needed" from the ISP must get back through rtr-a).
+    # The outside user's line carries only 1400 bytes, but the user advertises a 1460-byte MSS
+    # (as clients behind tunnels often do), so large replies through NAT need path MTU discovery:
+    # ICMP "fragmentation needed" from the ISP must get back through rtr-a's NAT and firewall.
     mtu: 1400
 
 sites:

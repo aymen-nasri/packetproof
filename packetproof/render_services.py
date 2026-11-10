@@ -43,6 +43,10 @@ def _prelude(net: Network, host: dict) -> list[str]:
         "ip link set eth1 up",
         f"ip route replace default via {_gateway(net, zone)} dev eth1",
     ]
+    if host["role"] == "outside" and net.data["isp"]["outside"].get("mtu", 1500) < 1500:
+        # Like a client behind a tunnel that does not clamp its MSS: it advertises 1460 bytes on a
+        # smaller line, so servers must rely on path-MTU discovery (ICMP "fragmentation needed").
+        lines[-1] += " advmss 1460"
     resolver = next(h for h in net.data["hosts"] if h["role"] == "dns-resolver")
     if zone in ("dmz", "db", "outside"):
         # DMZ and DB hosts get no DNS (INV-05, INV-12): the names they need come from a static
