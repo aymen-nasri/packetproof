@@ -111,6 +111,10 @@ def topology(net: Network) -> str:
 
     for i, s in enumerate(sites):
         link(f"{s['router']}:{UPLINK_IF}", f"{isp['name']}:eth{i + 1}")
+    # The outside user's line is smaller than 1500 at both ends (a mismatch inside one link would
+    # be a silent black hole, which PR #4's first run showed). The user still advertises a
+    # 1460-byte MSS (see render_services), so the server learns the limit only through path-MTU
+    # discovery.
     link(f"{isp['name']}:eth{len(sites) + 1}", "outside:eth1", isp["outside"].get("mtu", LINK_MTU))
     port_no: dict[str, int] = {}
 

@@ -77,7 +77,8 @@ def hold(url: str, seconds: float, cacert: str | None, interval: float = 0.2) ->
 
     stats = {"ok": 0, "failed": 0, "connections": 1, "errors": []}
     conn = connect()
-    end = time.monotonic() + seconds
+    start = time.monotonic()
+    end = start + seconds
     while time.monotonic() < end:
         try:
             conn.request("GET", u.path or "/")
@@ -89,7 +90,7 @@ def hold(url: str, seconds: float, cacert: str | None, interval: float = 0.2) ->
                 stats["failed"] += 1
         except Exception as exc:  # any failure counts; reconnect and keep measuring
             stats["failed"] += 1
-            stats["errors"].append(type(exc).__name__)
+            stats["errors"].append(f"{type(exc).__name__}@{time.monotonic() - start:.1f}s")
             conn.close()
             conn = connect()
             stats["connections"] += 1
