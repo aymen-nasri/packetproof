@@ -36,12 +36,15 @@ def frr_reload_test(router: str, base: Path, new: Path) -> str:
         # vtysh answers before the daemons have read frr.conf; a plan taken then compares against
         # an empty router and lists the whole config (the plans on PRs #2 to #4 did). Wait until
         # the base config is really loaded.
-        loaded = False
+        # ...and until two snapshots a second apart agree: the daemons read their parts in turn.
+        loaded, prev = False, None
         for _ in range(60):
             out = run(["docker", "exec", name, "vtysh", "-c", "show running-config"]).stdout
             if "router bgp" in out:
-                loaded = True
-                break
+                if out == prev:
+                    loaded = True
+                    break
+                prev = out
             time.sleep(1)
         if not loaded:
             return "the base config did not load in 60 s, so no plan; plain diff instead:\n" + plain_diff(

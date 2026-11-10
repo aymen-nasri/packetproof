@@ -85,6 +85,12 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           set -euo pipefail
+          if [ -f secrets/prod.sops.yaml ] && [ -z "$SOPS_AGE_KEY" ]; then
+            # Identities are committed but the key is gone: running with throwaway keys would make
+            # step 5c silently disappear from a green run.
+            echo "::error::secrets/prod.sops.yaml is committed but the prod environment has no SOPS_AGE_KEY"
+            exit 1
+          fi
           if [ -n "$SOPS_AGE_KEY" ] && [ -f secrets/prod.sops.yaml ]; then
             umask 077
             # A key stored from Windows PowerShell 5.1 through a pipe arrives with a UTF-8 byte-order
@@ -98,7 +104,10 @@ jobs:
             echo "No SOPS-managed identities configured: prod runs with throwaway keys." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
       - name: 3. Rebuild prod from the previous bundle
+        id: deploy
         run: |
+          # The plaintext is needed only to start the lab, and is removed whatever happens.
+          trap 'rm -f "$RUNNER_TEMP/prod-secrets.json"' EXIT
           from=$(python3 -c "import json; print(json.load(open('prod/fetched.json'))['from']['bundle'])")
           to=$(python3 -c "import json; print(json.load(open('prod/fetched.json'))['to']['bundle'])")
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py extract --bundle "$from" --dest prod/run/from --out results/extract-from.json
@@ -106,8 +115,8 @@ jobs:
           secrets=""
           [ -f "$RUNNER_TEMP/prod-secrets.json" ] && secrets="$RUNNER_TEMP/prod-secrets.json"
           make deploy VENV="$RUNNER_TEMP/venv" RENDER=prod/run/from/lab SECRETS="$secrets"
-          # The plaintext is needed only to start the lab.
-          rm -f "$RUNNER_TEMP/prod-secrets.json"
+          # Ready, not just started: keys exchanged, every node ready, both BGP sessions up.
+          python3 -c "import json, sys; d = json.load(open('prod/run/from/lab/deploy.json')); print(d); sys.exit(0 if d.get('ready') else 1)"
       - name: 3b. Drift check before the change, against the previous bundle
         # A baseline for 5a: what differs after the apply but not before was introduced by it.
         run: '"$RUNNER_TEMP/venv/bin/python" scripts/prod.py drift --new prod/run/from/lab --out results/drift-before.json || true'
@@ -116,20 +125,21 @@ jobs:
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py apply --running prod/run/from/lab
           --new prod/run/to/lab --out results/apply.json
       - name: 5a. Drift check
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         run: '"$RUNNER_TEMP/venv/bin/python" scripts/prod.py drift --new prod/run/to/lab --out results/drift.json'
       - name: 5b. Gate 2 against prod after the change, with the tests of the applied version
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         env:
           PP_RENDER: prod/run/from/lab
         run: |
           # The tests that belong to the bundle just applied, not whatever main holds today.
           to_commit=$(python3 -c "import json; print(json.load(open('prod/fetched.json'))['to']['commit'])")
           git fetch -q --depth=1 origin "$to_commit"
+          rm -rf tests/live  # exactly that commit's tests: none of main's newer files left over
           git checkout -q FETCH_HEAD -- tests/live
           "$RUNNER_TEMP/venv/bin/python" -m pytest tests/live -q -p no:cacheprovider             --junitxml results/gate2-after-change.xml
       - name: 5c. Prod runs its SOPS-managed identities
-        if: ${{ !cancelled() && steps.decrypt.outputs.managed == 'true' }}
+        if: ${{ !cancelled() && steps.decrypt.outputs.managed == 'true' && steps.deploy.outcome == 'success' }}
         run: '"$RUNNER_TEMP/venv/bin/python" scripts/prod.py identities --running prod/run/from/lab --out results/identities.json'
       - name: Summarise
         if: ${{ !cancelled() }}
@@ -146,6 +156,8 @@ jobs:
           print(f"- bundles verified: {v.get('ok')}; tampered bundle refused: {v.get('tampered', {}).get('refused')}")
           print(f"- in-place apply took {a.get('apply_seconds')} s; failed requests: {a.get('requests_failed')}; "
                 f"TCP connections broken: {a.get('connections_broken')}")
+          print(f"- pings lost across the tunnel: {a.get('pings_lost')}; hitless: {a.get('hitless')}; "
+                f"probe paths worked before the change: {a.get('precheck')}")
           print(f"- probes: `{json.dumps(a.get('probes'))}`")
           print(f"- drift before the change: {json.dumps(d0.get('routers'))}")
           print(f"- drift self-test: {d.get('self_test')}; no drift after the change: {d.get('ok')}")

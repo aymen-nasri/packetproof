@@ -86,8 +86,11 @@ def tamper(bundle: Path, work: Path) -> Path:
     with tarfile.open(bundle) as tf:
         tf.extractall(t, filter="data")
     ruleset = t / "lab" / "routers" / "rtr-a" / "ruleset.nft"
-    ruleset.write_text(ruleset.read_text().replace("hook forward priority filter; policy drop;",
-                                                   "hook forward priority filter; policy accept;"))
+    before = ruleset.read_text()
+    after = before.replace("hook forward priority filter; policy drop;", "hook forward priority filter; policy accept;")
+    if after == before:  # the renderer's text changed: a "tamper" that changes nothing proves nothing
+        raise SystemExit("tamper self-test: rtr-a's forward policy line was not found in the bundle")
+    ruleset.write_text(after)
     bad = work / bundle.name  # same name, so only the content differs
     with tarfile.open(bad, "w:gz") as tf:
         tf.add(t / "lab", arcname="lab")
@@ -96,11 +99,23 @@ def tamper(bundle: Path, work: Path) -> Path:
     return bad
 
 
+def _sha256(p: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
 def verify(fetched: dict, work: Path) -> dict:
     res = {role: verify_one(Path(info["bundle"])) for role, info in fetched.items() if role in ("from", "to")}
     bad = tamper(Path(fetched["to"]["bundle"]), work / "tampered")
     t = verify_one(bad)
-    res["tampered"] = {**t, "refused": not t["attestation_ok"] and not t["signature_ok"]}
+    # Refused for the right reasons: no attestation for these bytes, and a signature that does not
+    # match them. A network or login error would also fail both checks, and prove nothing.
+    no_attestation = not t["attestation_ok"] and ("404" in t["attestation_output"]
+                                                   or "no attestations" in t["attestation_output"].lower())
+    bad_signature = not t["signature_ok"] and "invalid signature" in t["signature_output"].lower()
+    res["tampered"] = {**t, "refused": no_attestation and bad_signature,
+                       "differs_from_original": _sha256(bad) != _sha256(Path(fetched["to"]["bundle"]))}
     res["ok"] = all(res[r]["attestation_ok"] and res[r]["signature_ok"] for r in ("from", "to")) and res["tampered"]["refused"]
     return res
 
@@ -129,11 +144,17 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
     }
     # Both paths must work before the measurement starts, so a failure in the window is the
     # change's doing (prod run 42827614277 lost one request to a DNS error of unknown timing).
+    # A path that never works is recorded and fails the run instead of being measured anyway.
+    precheck = {}
     for name, (node, url, extra) in probes.items():
+        precheck[name] = False
         for _ in range(30):
             if lab.dexec(node, "sh", "-c", f"curl -fsS -o /dev/null --max-time 3 {extra} {url}").returncode == 0:
+                precheck[name] = True
                 break
             time.sleep(1)
+    if not all(precheck.values()):
+        return {"precheck": precheck, "ok": False, "reason": "a probe path did not work before the change"}
     for name, (node, url, extra) in probes.items():
         lab.run(["docker", "exec", "-d", lab.container(node), "sh", "-c",
                  f"pp-probe.py hold {url} --seconds {seconds} {extra} > /tmp/hold-{name}.json"])
@@ -142,10 +163,10 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
     pings = (seconds - 5) * 5
     lab.run(["docker", "exec", "-d", lab.container("rtr-a"), "sh", "-c",
              f"ping -q -i 0.2 -W 1 -c {pings} 172.31.255.1 > /tmp/ping-tunnel.txt 2>&1"])
-    probe_start = time.monotonic()
+    probe_start = time.time()  # wall clock: the probes in the containers timestamp failures with it
     time.sleep(10)
     steps = []
-    t0 = time.monotonic()
+    t0 = time.time()
     for r in routers(new):
         c = lab.container(r)
         lab.run(["docker", "cp", str(new / "routers" / r / "frr.conf"), f"{c}:/tmp/new-frr.conf"])
@@ -155,8 +176,9 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
             lab.run(["docker", "cp", str(new / "routers" / r / "ruleset.nft"), f"{c}:/tmp/new.nft"])
             nf = lab.run(["docker", "exec", c, "nft", "-f", "/tmp/new.nft"], check=False)  # one atomic transaction
             steps.append({"router": r, "step": "nft -f", "rc": nf.returncode, "output": (nf.stdout + nf.stderr)[-600:]})
-    apply_s = round(time.monotonic() - t0, 2)
-    window = [round(t0 - probe_start, 1), round(time.monotonic() - probe_start, 1)]
+    t1 = time.time()
+    apply_s = round(t1 - t0, 2)
+    window = [round(t0 - probe_start, 1), round(t1 - probe_start, 1)]
     time.sleep(seconds - 8)
     results = {}
     for name, (node, _, _) in probes.items():
@@ -172,9 +194,13 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
     ping = ({"sent": int(m[1]), "received": int(m[2]), "lost": int(m[1]) - int(m[2])} if m
             else {"error": out[-300:]})
     results["tunnel_ping"] = ping
-    return {"steps": steps, "apply_seconds": apply_s, "apply_window_s": window, "probes": results,
+    applied = all(s["rc"] == 0 for s in steps) and all("error" not in p for p in results.values())
+    # A green prod run means the change landed AND nothing that must keep working was disturbed.
+    hitless = lost == 0 and broken == 0 and ping.get("lost") == 0
+    return {"precheck": precheck, "steps": steps, "apply_seconds": apply_s,
+            "apply_window_epoch": [round(t0, 3), round(t1, 3)], "apply_window_s": window, "probes": results,
             "requests_failed": lost, "connections_broken": broken, "pings_lost": ping.get("lost"),
-            "ok": all(s["rc"] == 0 for s in steps) and all("error" not in p for p in results.values())}
+            "applied": applied, "hitless": hitless, "ok": applied and hitless}
 
 
 def _norm_nft(doc: dict) -> list:
@@ -213,13 +239,19 @@ def _reference_frr(r: str, want: Path) -> list[str]:
     run(["docker", "run", "-d", "--name", name, "--hostname", r, "--network", "none", "--privileged", "-v", f"{d / 'frr.conf'}:/etc/frr/frr.conf",
          "-v", f"{d / 'daemons'}:/etc/frr/daemons", "-v", f"{d / 'vtysh.conf'}:/etc/frr/vtysh.conf", ROUTER_IMAGE])
     try:
-        out = ""
-        for _ in range(30):
+        # Loaded = BGP is configured and two snapshots a second apart agree: daemons read their
+        # part of the file in turn (zebra, bgpd, staticd), so one snapshot can miss the last one.
+        out, prev = "", None
+        for _ in range(60):
             res = run(["docker", "exec", name, "vtysh", "-c", "show running-config"])
             if res.returncode == 0 and "router bgp" in res.stdout:
-                out = res.stdout
-                break
+                if res.stdout == prev:
+                    out = res.stdout
+                    break
+                prev = res.stdout
             time.sleep(1)
+        if not out:
+            raise RuntimeError(f"the reference FRR for {r} never settled, so drift cannot be judged")
         _reference_cache[r] = _norm_frr(out)
         return _reference_cache[r]
     finally:
@@ -244,24 +276,42 @@ def _nft_drift(r: str, want: Path) -> bool:
     return _norm_nft(running) != _norm_nft(json.loads(res.stdout))
 
 
+SELFTEST = "pp-drift-selftest"
+
+
 def drift(want: Path) -> dict:
+    """Compare every router with the bundle first. Then prove the check can see drift: plant one
+    FRR line and one nftables rule on rtr-a, check each is reported, and remove exactly those two
+    (never by reloading the bundle, which would erase real drift: review of v1.0.0)."""
     site_routers = [r for r in routers(want) if (want / "routers" / r / "ruleset.nft").exists()]
-    # Self-test first: plant drift in FRR and nftables on rtr-a, check both are seen, then undo.
-    c = lab.container("rtr-a")
-    lab.run(["docker", "exec", c, "vtysh", "-c", "configure terminal", "-c", "ip prefix-list DRIFT seq 5 permit 10.0.0.0/8"])
-    lab.run(["docker", "exec", c, "nft", "insert", "rule", "inet", "pp", "forward", "ip", "saddr", "172.16.20.10", "accept"])
-    self_test = {"frr_seen": bool(_frr_drift("rtr-a", want)), "nft_seen": _nft_drift("rtr-a", want)}
-    lab.run(["docker", "exec", c, "vtysh", "-c", "configure terminal", "-c", "no ip prefix-list DRIFT"])
-    lab.run(["docker", "cp", str(want / "routers" / "rtr-a" / "ruleset.nft"), f"{c}:/tmp/want.nft"])
-    lab.run(["docker", "exec", c, "nft", "-f", "/tmp/want.nft"])
     found = {}
     for r in routers(want):
         frr = _frr_drift(r, want)
         nft = _nft_drift(r, want) if r in site_routers else False
         found[r] = {"frr": frr, "nft_differs": nft}
     clean = all(not v["frr"] and not v["nft_differs"] for v in found.values())
+
+    c = lab.container("rtr-a")
+    self_test = {"frr_seen": False, "nft_seen": False, "undone": False}
+    try:
+        lab.run(["docker", "exec", c, "vtysh", "-c", "configure terminal", "-c",
+                 "ip prefix-list DRIFT seq 5 permit 10.0.0.0/8"])
+        lab.run(["docker", "exec", c, "nft", "insert", "rule", "inet", "pp", "forward", "ip", "saddr",
+                 "172.16.20.10", "accept", "comment", f'"{SELFTEST}"'])
+        self_test["frr_seen"] = any("DRIFT" in line for line in _frr_drift("rtr-a", want))
+        self_test["nft_seen"] = _nft_drift("rtr-a", want)
+    finally:
+        lab.run(["docker", "exec", c, "vtysh", "-c", "configure terminal", "-c", "no ip prefix-list DRIFT"], check=False)
+        listing = lab.run(["docker", "exec", c, "nft", "-a", "list", "chain", "inet", "pp", "forward"], check=False).stdout
+        for line in listing.splitlines():
+            m = re.search(r"# handle (\d+)", line)
+            if SELFTEST in line and m:
+                lab.run(["docker", "exec", c, "nft", "delete", "rule", "inet", "pp", "forward", "handle", m[1]], check=False)
+    # Undone means rtr-a is back exactly where the real comparison found it.
+    self_test["undone"] = (bool(_frr_drift("rtr-a", want)) == bool(found["rtr-a"]["frr"])
+                           and _nft_drift("rtr-a", want) == found["rtr-a"]["nft_differs"])
     return {"self_test": self_test, "routers": found,
-            "ok": clean and self_test["frr_seen"] and self_test["nft_seen"]}
+            "ok": clean and all(self_test.values())}
 
 
 def identities(running: Path, public: Path) -> dict:
