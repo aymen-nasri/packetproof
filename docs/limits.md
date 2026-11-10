@@ -9,15 +9,17 @@ a CI run, a planted fault or a week-1 result; run numbers are in [scorecard.md](
 |---|---|---|---|
 | JSON Schema | the structure and types of `network.yaml` | anything about meaning | |
 | Conftest on the intent | the 13 hand-written invariants, as `network.yaml` states them | template bugs: the intent can be right while the generated config is wrong | F21 (source NAT removed in the template) passed Gate 1 |
-| Conftest on the loaded rulesets | the firewall's structure as nftables actually loaded it: default drop, established first, edge filter, reverse-path check | what the rules let through. A broad accept is caught only because it displaced the established/related rule | F13 |
+| Conftest on the loaded rulesets | the firewall's structure as nftables actually loaded it, found by hook and device: default drop, established first, edge filter on the uplink's source addresses, reverse-path check on every zone interface | what the rules let through. A broad accept is caught only because it displaced the established/related rule. Until v1.1.0 it found chains by name, so a template that dropped a chain's hook would have passed ([review](review-v1.0.0.md)) | F13; 8 policy unit tests |
 | `vtysh --dryrun` | FRR syntax | meaning. It can exit 0 without checking anything, so Gate 1 first proves it rejects a broken config | week 1, test B |
 | Batfish | FRR configs (as Cumulus files): parsing, BGP session compatibility, routes, route leaks | nftables, WireGuard, DNS, TLS, HAProxy. It reports the BGP session over `wg0` as established even when the tunnel is down, and does not model WireGuard keys, endpoints or AllowedIPs. Its grammar lacks `exit`, `log stdout` and `bgp ebgp-requires-policy`, so the snapshot leaves those lines out | week 1 B2; F08, F09, F10 |
 
-## Gate 2: the live copy (about six minutes)
+## Gate 2: the live copy (about four minutes since v1.1.0, six and a half before)
 
 | Sees | Cannot see | Evidence |
 |---|---|---|
-| Real traffic between real daemons, on one runner | Mistakes another control masks: three faults changed configs but no traffic (below) | F04, F07, F10 |
+| Real traffic between real daemons, on one runner | Mistakes another control masks: four faults pass Gate 2 because another layer holds. F04, F07 and F10 escape both gates (below). F26 opens the resolver to the DMZ, but the DMZ has no DNS flow through the firewall and no resolver configured, so no packet can show it; Gate 1 catches it (INV-05). Until amendment A2, F05 passed Gate 2 too: as first written it could not change any route | F04, F07, F10, F26 |
+| Paths that exist only in the address plan | Anything off the plan. Until v1.1.0 every container also sat on containerlab's management network, a path around the zone firewall that no attack path tried; Gate 2 now checks each host has only its planned address | [review](review-v1.0.0.md); `test_planes` |
+| Whether a probe really ran | Since v1.1.0: nothing; every probe and capture must prove it ran or the test errors. In v1.0.0 the three nmap scans (AP-01, AP-04, AP-08) timed out on every host and reported nothing, so those attack paths proved nothing | PR #19's first run |
 | Only what a test asks | Anything without a test. The tests are hand-written, which keeps them independent of the generator, but they cover the method's list and nothing more | |
 | | Hardware, real latency, real loss: containerlab "does not fully replicate the hardware characteristics" | |
 | | The runner's environment leaking in: the host's AppArmor profiles confine `wg` and `bgpd` inside privileged containers | docs/go-no-go.md; evidence file `runner-host.txt` |
@@ -53,7 +55,7 @@ after seeing them escape would flatter the score, so they are left as escapes.
 |---|---|---|
 | Whether images and bundles are the ones CI built and signed; a tampered bundle is refused | Whether CI itself was honest: provenance proves which workflow built a bundle, not that the workflow is correct | prod runs, step 2 |
 | Failed requests and broken connections on two held TCP connections during an apply | Anything the two probes do not cross; loss shorter than one 0.2 s probe interval | prod runs, step 4 |
-| Drift in FRR (against a fresh FRR started from the same file) and in nftables | Host services: the in-place apply covers router FRR and nftables only; DNS, CA and proxy changes need a rebuild | prod runs, steps 3b and 5a |
+| Drift in FRR (against a fresh FRR started from the same file) and in nftables | Host services and the lab's own wiring: the in-place apply covers router FRR and nftables only; DNS, CA, proxy and topology changes need a rebuild. Before v1.1.0, the drift check reloaded rtr-a's ruleset before comparing it, so nftables drift on rtr-a could not be seen | prod runs, steps 3b and 5a; [review](review-v1.0.0.md) |
 
 **What the drift check found:** under `frr defaults datacenter`, applying a bundle whose FRR configs
 were unchanged left all three routers running with `no bgp deterministic-med` and without
@@ -69,4 +71,9 @@ turns `bgp deterministic-med` on before FRR ships the fix.
 - It grades only the faults its author planted. Fault types come from common real-world mistakes,
   and the list and the rules were committed before any gate existed ([method.md](method.md)), but
   the author still wrote both sides.
-- Timing is measured on shared runners and varies; numbers are medians with ranges.
+- Timing is measured on shared runners and varies; numbers are medians with ranges. A faulted lab
+  is slow: its probes wait out their timeouts (F15, which drops all return traffic, took 31 minutes
+  in run 42902266017).
+- A gate that could not judge a fault (a tool, the runner or the harness failed) makes that fault
+  void and re-run, never a catch (amendment A2). Before A2, such a failure would have counted as a
+  catch; no published run had one.
