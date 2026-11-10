@@ -4,6 +4,11 @@ name: images
 # scanned with Trivy (any fixable CRITICAL blocks), described by a CycloneDX SBOM, pushed to GHCR,
 # signed keylessly with cosign, given an SBOM attestation and a build provenance attestation, and
 # verified. The prod workflow pulls them by digest and verifies the signature before use.
+#
+# Only a change to the images (or a manual run) builds and publishes. The weekly schedule rescans
+# the images already published as :main, by digest, because new CVEs are published against
+# unchanged images. It never rebuilds: a rebuild would pull newer packages into prod's images
+# without a pull request or Gate 2 (review of v1.0.0).
 on:
   push:
     branches: [main]
@@ -11,14 +16,20 @@ on:
       - "images/**"
       - ".github/workflows/images.yml"
   schedule:
-    - cron: "17 5 * * 1"   # weekly rescan: new CVEs are published against unchanged images
+    - cron: "17 5 * * 1"
   workflow_dispatch:
 
 permissions: {}
 
+# Two publishes must never interleave: the last to finish would decide what :main points to.
+concurrency:
+  group: images
+  cancel-in-progress: false
+
 jobs:
   image:
     name: ${{ matrix.image }}
+    if: ${{ github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -46,6 +57,7 @@ jobs:
         run: docker build -q -t "$REPO:$GITHUB_SHA" "images/$IMAGE"
       - name: Scan; any fixable CRITICAL vulnerability blocks
         run: |
+          set -o pipefail
           "$RUNNER_TEMP/trivy" image --quiet --severity HIGH,CRITICAL --ignore-unfixed "$REPO:$GITHUB_SHA" | tee "$RUNNER_TEMP/scan.txt"
           "$RUNNER_TEMP/trivy" image --quiet --severity CRITICAL --ignore-unfixed --exit-code 1 "$REPO:$GITHUB_SHA"
       - name: SBOM (CycloneDX)
@@ -93,3 +105,34 @@ jobs:
           name: image-${{ matrix.image }}
           path: out/
           retention-days: 90
+
+  rescan:
+    name: rescan ${{ matrix.image }} (published :main, by digest)
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [router, node]
+    env:
+      REPO: ghcr.io/${{ github.repository_owner }}/packetproof-${{ matrix.image }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Install Trivy 0.76.2, checking its checksum
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/trivy.tgz" https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz
+          echo "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf  $RUNNER_TEMP/trivy.tgz" | sha256sum -c
+          tar xzf "$RUNNER_TEMP/trivy.tgz" -C "$RUNNER_TEMP" trivy
+      - name: Scan the image prod and releases use; a fixable CRITICAL fails this run
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker pull -q "$REPO:main" > /dev/null
+          ref="$REPO@$(docker inspect --format '{{index .RepoDigests 0}}' "$REPO:main" | cut -d@ -f2)"
+          echo "rescanning $ref" | tee -a "$GITHUB_STEP_SUMMARY"
+          "$RUNNER_TEMP/trivy" image --quiet --severity HIGH,CRITICAL --ignore-unfixed "$ref" | tee -a "$GITHUB_STEP_SUMMARY"
+          "$RUNNER_TEMP/trivy" image --quiet --severity CRITICAL --ignore-unfixed --exit-code 1 "$ref"

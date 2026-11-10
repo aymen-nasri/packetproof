@@ -1,7 +1,9 @@
 # Verify a release yourself
 
 Every file in a PacketProof release can be checked without trusting this repository's word for
-it. You need the GitHub CLI (`gh`) and cosign 2.4 or newer. Replace `v1.0.0` with the release you
+it. You need the GitHub CLI (`gh`) and cosign 3.0 or newer: the signatures are Sigstore bundles
+(format v0.3), and the image signatures are stored as OCI referrers, which older cosign does not
+read by default. Replace `v1.0.0` with the release you
 are checking.
 
 ```bash
@@ -50,12 +52,15 @@ make venv && make bundle BUNDLE=mine.tgz
 sha256sum mine.tgz   # compare with packetproof-config-$TAG.tgz
 ```
 
-A different Python or tar version can change the bytes. The workflow's comparison on two GitHub
-runners is the claim this repository makes.
+`make bundle` fixes the tar format, the file modes (so your umask does not matter), the owner and
+every timestamp. A different Python or tar version can still change the bytes. The workflow's
+comparison on two GitHub runners is the claim this repository makes.
 
 ## 4. The lab images are signed, and their SBOMs came from signed attestations
 
-`images.txt` lists both images by digest. For each:
+`images.txt` lists both images by digest, as they were at the tagged commit (the newest image
+build on `main` at or before it; releases before v1.1.0 recorded the images current on `main` at
+release time instead). For each:
 
 ```bash
 cosign verify ghcr.io/aymen-nasri/packetproof-router@sha256:... \
