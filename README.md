@@ -1,37 +1,146 @@
 # PacketProof
 
-Prove every network change before it merges.
+**Prove every network change before it merges.**
 
-PacketProof will be a small two-site company network written as code. FRRouting routers exchange
-BGP over a WireGuard tunnel, nftables firewalls split the network into zones and do NAT, and the
-network has split-horizon DNS, a step-ca certificate authority and an HAProxy reverse proxy. Every
-pull request is meant to be rebuilt as a disposable containerlab copy on a free GitHub Actions
-runner and must prove its routing, segmentation, DNS and TLS before it merges. The gates themselves
-will be graded against deliberately broken changes and attack paths.
+PacketProof is a small two-site company network written as code, and a pipeline that refuses to
+merge a change until a disposable copy of the whole network has proved it. Then it grades its own
+gates against 30 deliberately broken changes and 12 attack paths, and publishes what they missed.
 
-## Status
+> **Scorecard (Gate 3 on the current design):** of 30 planted faults, the static gate caught 19,
+> the live copy caught 8 more, and 3 escaped both. All three escapes are latent: another control or
+> the protocol masked them, and no traffic changed ([why, one by one](docs/limits.md#the-three-escapes-that-remain-and-why-each-changed-no-traffic)).
+> All 12 attack paths from a compromised DMZ host were blocked while their legitimate flows passed.
+> The first design had 4 escapes in 4 identical runs; one of them exposed a disabled FRR safety
+> net, which was fixed, and the fault was then caught ([scorecard.md](docs/scorecard.md)).
+>
+> **Prod:** a firewall-only change applied in place in about one second with no failed requests and
+> no broken TCP connections (two runs), after both images and both config bundles were verified and
+> a tampered bundle was refused. The drift check then caught the apply tool itself, `frr-reload.py`,
+> changing two BGP settings nobody asked for ([prod.md](docs/prod.md)).
+>
+> Live scorecard: **https://aymen-nasri.github.io/packetproof/**
 
-**Week 1 is done: the go/no-go checks. The network described above is not built yet.** Week 1
-tested whether the tools the design depends on actually hold. Results, each linked to its CI run,
-are in [docs/go-no-go.md](docs/go-no-go.md):
+## How a change is proved
 
-| Assumption | Verdict |
-|---|---|
-| containerlab runs on a free runner | GO: 5 of 5 runs, about 22 s to deploy and check |
-| Batfish reads the generated FRR configs | GO, and it caught a planted prefix-list leak; it cannot see whether the WireGuard tunnel is up |
-| WireGuard works inside containers | GO: 5 of 5 runs, BGP over the tunnel, capture shows no clear traffic |
-| The CI time budget holds | GO: one full run 87 s, one planted fault 23 s (single measurements) |
-| The Windows 10 laptop can run the lab | NO-GO (not attempted): development happens in CI |
+```
+                 network.yaml  (the single source of truth)
+                          |  pull request
+   +----------------------+----------------------+--------------------------------+
+   | Gate 1: static        | Gate 2: live copy     | Gate 3: graded suite (nightly) |
+   | about 1 minute        | about 6 minutes       | about 22 minutes, 20 runners   |
+   | schema, Conftest on   | the whole network in  | each of 30 planted faults      |
+   | intent and on loaded  | containerlab on the   | through Gates 1 and 2, next to |
+   | nftables, vtysh,      | runner; 119 tests of  | an unfaulted baseline; 12      |
+   | Batfish; the plan     | routing, firewall,    | attack paths; scorecard to     |
+   | (frr-reload --test)   | NAT, DNS, TLS, MTU,   | GitHub Pages                   |
+   | posted on the PR      | proxy, monitoring     |                                |
+   +-----------------------+-----------------------+--------------------------------+
+                          |  merge to main
+   config bundle -> GitHub attestation + cosign signature; images signed with cosign
+                          |
+   "prod": verify images and bundles (a tampered bundle is refused) -> rebuild from the
+           previous bundle -> apply the new one in place while probes count failures
+           -> drift check -> Gate 2 again
+```
 
-The rules that judge every result are in [docs/method.md](docs/method.md): the week-1 pass rules,
-the hand-written invariants, 30 planted faults and 12 attack paths. That file was committed before
-any test code existed, so results cannot shape the rules that judge them.
+## The network
 
-## Security
+```
+[client-b]--LAN-B--[rtr-B]==WireGuard + eBGP via [isp]==[rtr-A]--+-- DMZ:  [haproxy] [ns1]
+                                   |                              +-- APP:  [app1] [app2]
+                             [outside host]                       +-- DB:   [db]
+                                                                  +-- SVC:  [resolver] [step-ca]
+                                                                  +-- LAN-A:[client-a] [admin] [mon]
+```
 
-Every action is pinned to a full commit SHA, the default workflow token is read-only, and every
-push and pull request is checked by Gitleaks (secrets in the whole history) and zizmor (unsafe
-workflow patterns). See [SECURITY.md](SECURITY.md) to report a problem.
+- **Routing:** FRR, eBGP to the ISP (public prefixes only) and eBGP over the WireGuard tunnel
+  (private prefixes only), prefix-lists on every session. [Address plan](docs/address-plan.md).
+- **Firewalls:** nftables on both site routers: a stateless edge filter before conntrack, a
+  reverse-path check on every zone, a default-drop zone firewall built from an exact allow list,
+  NAT and two published services.
+- **Services:** split-horizon DNS (Unbound inside, NSD outside), a private CA (step-ca) issuing
+  24-hour certificates over ACME, HAProxy with health-checked backends, and Prometheus with
+  blackbox probes.
+- **Everything is rendered** by `python -m packetproof render` from [network.yaml](network.yaml):
+  router configs, rulesets, DNS zones, proxy and CA settings, the containerlab topology and the
+  Batfish snapshot.
+
+## Why the tests can be trusted
+
+- **The method came first.** The pass rules, the 30 faults, the 12 attack paths and the 13
+  invariants were committed in [docs/method.md](docs/method.md) before any test code existed. Every
+  later change to a rule is a dated amendment.
+- **Independent checks.** The invariants (Conftest) and Gate 2's expected values are written by
+  hand, never generated from `network.yaml`, so a wrong intent cannot pass both.
+- **Every attack has a legitimate twin.** An attack counts as blocked only if a flow that must work
+  passes in the same run. A firewall that blocks everything does not pass.
+- **Probes must prove they ran.** A probe that cannot run raises an error instead of reporting
+  "blocked".
+- **Escapes are published**, with the evidence for why ([limits.md](docs/limits.md)).
+
+## Securing the pipeline itself
+
+Every Action is pinned to a commit SHA, and the repository refuses unpinned ones. The default
+workflow token is read-only, and each job asks only for what it needs. zizmor and OpenSSF Scorecard
+audit the workflows; Gitleaks scans the whole history. Images are pinned by digest, scanned with
+Trivy, given an SBOM and signed with cosign. Config bundles carry a GitHub artifact attestation and a
+cosign signature, and prod verifies both before applying anything. WireGuard private keys are
+generated inside each router and never leave it. SOPS with age is proved by a key-rotation test.
+[Threat model](docs/threat-model.md).
+
+## Five diagnoses
+
+Each starts from a symptom and works up the stack with real output from a Gate 3 run:
+
+1. [BGP is up, but site B is unreachable](docs/diagnoses/01-bgp-up-site-unreachable.md) (WireGuard AllowedIPs)
+2. [The frontend cannot reach the API](docs/diagnoses/02-frontend-cannot-reach-api.md) (a missing firewall flow)
+3. [A stale DNS record took TLS down with it](docs/diagnoses/03-stale-dns-broke-tls.md) (ACME validation)
+4. [Which certificate error is this, and why?](docs/diagnoses/04-which-certificate-error.md)
+5. [Users lost the internet, and DNS for internet names went with it](docs/diagnoses/05-users-lost-the-internet.md) (a template bug)
+
+## Run it
+
+Any Linux host with Docker, containerlab and sudo:
+
+```bash
+pip install -r requirements.txt
+docker build -t packetproof/router:dev images/router && docker build -t packetproof/node:dev images/node
+python -m packetproof render --out build/lab            # add --fault F08 to plant a fault
+python -m packetproof deploy --render build/lab
+PP_RENDER=build/lab python -m pytest tests/live         # Gate 2
+python -m packetproof destroy --render build/lab
+```
+
+The Windows 10 laptop this was built on did not run the lab (see [week 1](docs/go-no-go.md)):
+all lab work runs in CI.
+
+## What the gates caught in their own builder
+
+Each of these was found by a check, fixed in a commit that says what it saw, and left in the history:
+
+- **A host's AppArmor follows binaries into containers.** `wg` could not read its key until the key
+  moved to `/etc/wireguard`: the runner's profile for `wg` confines it even in a privileged
+  container ([go-no-go.md](docs/go-no-go.md)).
+- **A green check that did not pass, twice.** Week 1's verdict step and the SOPS rotation test piped
+  their result into `tee` without `pipefail`, so they exited 0 on failure; the rotation test printed
+  two FAILs and stayed green.
+- **Probes that could not run made attacks look blocked.** Every probe now has to prove it ran.
+- **A datacenter profile switched off a safety net.** `frr defaults datacenter` disables RFC 8212's
+  `ebgp-requires-policy`, which is why fault F06 first escaped ([limits.md](docs/limits.md)).
+- **An MTU mismatch is a black hole, not a bottleneck.** The first fix for Gate 2's path-MTU blind
+  spot lowered one end of a link and silently dropped TLS ClientHellos.
+- **Reproducible archives can break servers.** Bundles packed with mtime 0 deployed an NSD that
+  never loaded its zone ([prod.md](docs/prod.md)).
+- **The apply tool drifts.** `frr-reload.py --reload` of an unchanged config toggles two BGP
+  defaults under the datacenter profile; the drift check caught it ([prod.md](docs/prod.md)).
+
+## Documents
+
+- [Method](docs/method.md): the rules, faults, attack paths and invariants, committed before any test
+- [Week 1](docs/go-no-go.md): go/no-go checks, with every run linked, including the failures
+- [Scorecard](docs/scorecard.md): every Gate 3 run and how each fault was graded
+- [What each gate cannot see](docs/limits.md), [the prod change path](docs/prod.md),
+  [threat model](docs/threat-model.md), [address plan](docs/address-plan.md)
 
 ## License
 
