@@ -21,6 +21,9 @@ by the rules in [method.md](method.md), part 6. The newest run is published at
 | [42857438347](https://github.com/aymen-nasri/packetproof/actions/runs/42857438347) | [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 410 s (278 to 1052) |
 | [42873879465](https://github.com/aymen-nasri/packetproof/actions/runs/42873879465) | [00ba68c](https://github.com/aymen-nasri/packetproof/commit/00ba68c) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 446 s (295 to 1076) |
 | [42877631728](https://github.com/aymen-nasri/packetproof/actions/runs/42877631728) | [86b8f81](https://github.com/aymen-nasri/packetproof/commit/86b8f81) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 446 s (314 to 1080) |
+| [42902266017](https://github.com/aymen-nasri/packetproof/actions/runs/42902266017) | [3fb6f3f](https://github.com/aymen-nasri/packetproof/commit/3fb6f3f) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 285 s (248 to 1860) |
+| [42902610699](https://github.com/aymen-nasri/packetproof/actions/runs/42902610699) | [3fb6f3f](https://github.com/aymen-nasri/packetproof/commit/3fb6f3f) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 276 s (241 to 1858) |
+| [42907526683](https://github.com/aymen-nasri/packetproof/actions/runs/42907526683) | [3fb6f3f](https://github.com/aymen-nasri/packetproof/commit/3fb6f3f) | yes | 19 | 8 | 3 | 0 | 12 of 12 | 276 s (238 to 1840) |
 
 **The commits.**
 - [8fd0717](https://github.com/aymen-nasri/packetproof/commit/8fd0717), the first design: 4 runs, identical verdicts for every fault and both gates: yes.
@@ -28,14 +31,16 @@ by the rules in [method.md](method.md), part 6. The newest run is published at
 - [42970a2](https://github.com/aymen-nasri/packetproof/commit/42970a2), after moving FRR from the datacenter to the traditional profile, to avoid FRR bug #22939 that prod's drift check found: 3 runs, identical verdicts for every fault and both gates: yes.
 - [00ba68c](https://github.com/aymen-nasri/packetproof/commit/00ba68c), with two more Gate 2 tests: a TCP traceroute from site B across the tunnel, and the DB host's listening sockets: 1 run.
 - [86b8f81](https://github.com/aymen-nasri/packetproof/commit/86b8f81), with the outside test server limited to TLS 1.2 and newer: the lab code that v1.0.0 releases: 1 run.
+- [3fb6f3f](https://github.com/aymen-nasri/packetproof/commit/3fb6f3f), v1.1.0, after the review of v1.0.0: no management network, the ISP filter at every length, stricter tests whose probes must prove they ran, F05 amended (A2), and grading that voids a fault a gate could not judge: 3 runs, identical verdicts for every fault and both gates: yes.
 
 No fault is flaky under the method's rule. Between consecutive commits, the verdicts that moved:
-- 8fd0717 to 7e3c7bc: F06 (escaped to caught by gate 2); F11 (caught by gate 1 to caught by gate 1, Gate 2 now catches it too).
+- 8fd0717 to 7e3c7bc: F06 (escaped to caught by gate 2); F11 (still caught by gate 1; Gate 2 now catches it).
 - 7e3c7bc to 42970a2: none.
 - 42970a2 to 00ba68c: none.
 - 00ba68c to 86b8f81: none.
+- 86b8f81 to 3fb6f3f: F05 (still caught by gate 1; Gate 2 now catches it; amendment A2 changed the fault itself).
 
-## Every fault, on the current design (86b8f81)
+## Every fault, on the current design (3fb6f3f)
 
 | ID | Layer | Fault | Gate 1 | Gate 2 | Verdict | On the first design | Predicted first gate |
 |---|---|---|---|---|---|---|---|
@@ -43,13 +48,13 @@ No fault is flaky under the method's rule. Between consecutive commits, the verd
 | F02 | BGP | Wrong remote AS for the tunnel peer on rtr-b (65003 instead of 65001) | caught | caught | **caught by gate 1** | same | Gate 1 |
 | F03 | BGP | Typo in rtr-b's export prefix-list (172.24.10.0/25 instead of /24), so LAN-B vanishes from site A | caught | caught | **caught by gate 1** | same | Gate 1 |
 | F04 | BGP | rtr-b advertises its own uplink /31 over the tunnel (recursive routing) | passed | passed | **escaped** | same | Gate 2 |
-| F05 | Routing | Static route on rtr-b for 172.16.0.0/16 via isp beats BGP, so site-to-site traffic leaves in clear | caught | passed | **caught by gate 1** | same | Gate 2 |
+| F05 | Routing | Static route on rtr-b for the DMZ 172.16.20.0/24 via isp, same length as BGP's and a lower distance, so site B's traffic to the DMZ leaves in clear | caught | caught | **caught by gate 1** | same verdict; Gate 2 missed it then (the fault as first written; amended by A2) | Gate 2 |
 | F06 | BGP | Inbound route-map removed for the tunnel peer on rtr-a (session up, zero prefixes accepted) | passed | caught | **caught by gate 2** | escaped | Gate 1 |
 | F07 | BGP | rtr-a sends a default route to rtr-b, so site B's internet traffic would hairpin through site A | passed | passed | **escaped** | same | Gate 2 |
 | F08 | WireGuard | AllowedIPs on rtr-a lists only the tunnel address, not site B (BGP up, data dropped) | passed | caught | **caught by gate 2** | same | Gate 2 |
 | F09 | WireGuard | Wrong peer public key on rtr-b (no handshake) | passed | caught | **caught by gate 2** | same | Gate 2 |
 | F10 | WireGuard | Wrong endpoint port on rtr-a (51821, no handshake) | passed | passed | **escaped** | same | Gate 2 |
-| F11 | MTU | ICMP "fragmentation needed" dropped by rtr-a's forward chain (small pings pass, large transfers hang) | caught | caught | **caught by gate 1** | caught by gate 1 | Gate 2 |
+| F11 | MTU | ICMP "fragmentation needed" dropped by rtr-a's forward chain (small pings pass, large transfers hang) | caught | caught | **caught by gate 1** | same verdict; Gate 2 missed it then | Gate 2 |
 | F12 | Firewall | Hole into the DB zone, TCP 5432 accepted from any zone rather than only APP | caught | caught | **caught by gate 1** | same | Gate 1 |
 | F13 | Firewall | A broad accept from the DMZ to 172.16.0.0/16 placed above the specific rules (shadowing) | caught | caught | **caught by gate 1** | same | Gate 2 |
 | F14 | Firewall | Forward-chain default policy changed from drop to accept on rtr-a | caught | caught | **caught by gate 1** | same | Gate 1 |
@@ -76,6 +81,11 @@ F06 is reported, as the method requires, as **escaped, then caught by Gate 2 aft
 
 ## Attack paths
 
-All 12 attack paths from a compromised DMZ host were blocked in every run, each with its legitimate
-flow passing in the same test ([tests/live/test_attacks.py](../tests/live/test_attacks.py)).
+All 12 attack paths from a compromised DMZ host were scored blocked in every run, each with its
+legitimate flow passing in the same test ([tests/live/test_attacks.py](../tests/live/test_attacks.py)).
+**Up to 86b8f81 (v1.0.0), three of them proved nothing:** the nmap scans behind AP-01, AP-04 and
+AP-08 used one command from the first design on. Re-run with a check that the scan finished (PR #19),
+that command timed out on every host and reported no ports at all ([review-v1.0.0.md](review-v1.0.0.md)).
+From 3fb6f3f (v1.1.0) on, the scans finish, every probe must prove it ran, and a DMZ probe counts as
+blocked only when it is dropped ("filtered"), so all 12 are proved.
 
