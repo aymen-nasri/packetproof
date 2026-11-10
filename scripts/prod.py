@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -43,9 +44,13 @@ def run(cmd: list[str], check: bool = False, timeout: int = 300) -> subprocess.C
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=check)
 
 
-def fetch(out: Path) -> dict:
+def fetch(out: Path, from_run: str | None = None, to_run: str | None = None) -> dict:
     runs = json.loads(run(["gh", "run", "list", "-R", REPO, "-w", "bundle.yml", "-b", "main", "-s", "success",
-                           "--json", "databaseId,headSha,createdAt", "-L", "2"], check=True).stdout)
+                           "--json", "databaseId,headSha,createdAt", "-L", "50"], check=True).stdout)
+    if from_run and to_run:  # a chosen pair, e.g. to re-measure one change
+        by_id = {str(r["databaseId"]): r for r in runs}
+        runs = [by_id[to_run], by_id[from_run]]
+    runs = runs[:2]
     if len(runs) < 2:
         raise SystemExit("need two successful bundle runs on main")
     result = {}
@@ -100,6 +105,11 @@ def extract(bundle: Path, dest: Path) -> Path:
     dest.mkdir(parents=True)
     with tarfile.open(bundle) as tf:
         tf.extractall(dest, filter="data")
+    # Like `tar -m`: files get the extraction time. Bundles built before bundle.yml used the
+    # commit time carry mtime 0, and NSD does not load a zone file whose mtime is 0 (prod run
+    # 42827614277: every outside DNS query got SERVFAIL).
+    for p in dest.rglob("*"):
+        os.utime(p, None, follow_symlinks=False)
     return dest / "lab"
 
 
@@ -112,9 +122,17 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
         "nat_path": ("client-a", "http://192.0.2.10/", ""),
         "tunnel_path": ("client-b", "https://www.packetproof.example/", "--cacert /shared/pki/root_ca.crt"),
     }
+    # Both paths must work before the measurement starts, so a failure in the window is the
+    # change's doing (prod run 42827614277 lost one request to a DNS error of unknown timing).
+    for name, (node, url, extra) in probes.items():
+        for _ in range(30):
+            if lab.dexec(node, "sh", "-c", f"curl -fsS -o /dev/null --max-time 3 {extra} {url}").returncode == 0:
+                break
+            time.sleep(1)
     for name, (node, url, extra) in probes.items():
         lab.run(["docker", "exec", "-d", lab.container(node), "sh", "-c",
                  f"pp-probe.py hold {url} --seconds {seconds} {extra} > /tmp/hold-{name}.json"])
+    probe_start = time.monotonic()
     time.sleep(10)
     steps = []
     t0 = time.monotonic()
@@ -128,6 +146,7 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
             nf = lab.run(["docker", "exec", c, "nft", "-f", "/tmp/new.nft"], check=False)  # one atomic transaction
             steps.append({"router": r, "step": "nft -f", "rc": nf.returncode, "output": (nf.stdout + nf.stderr)[-600:]})
     apply_s = round(time.monotonic() - t0, 2)
+    window = [round(t0 - probe_start, 1), round(time.monotonic() - probe_start, 1)]
     time.sleep(seconds - 8)
     results = {}
     for name, (node, _, _) in probes.items():
@@ -138,7 +157,7 @@ def apply(running: Path, new: Path, seconds: int = 45) -> dict:
             results[name] = {"error": out[-300:]}
     lost = sum(p.get("failed", 0) for p in results.values())
     broken = sum(max(p.get("connections", 1) - 1, 0) for p in results.values())
-    return {"steps": steps, "apply_seconds": apply_s, "probes": results,
+    return {"steps": steps, "apply_seconds": apply_s, "apply_window_s": window, "probes": results,
             "requests_failed": lost, "connections_broken": broken,
             "ok": all(s["rc"] == 0 for s in steps) and all("error" not in p for p in results.values())}
 
@@ -157,18 +176,46 @@ def _norm_nft(doc: dict) -> list:
     return json.loads(re.sub(r'"_(p|b)": \d+', '"_\\1": 0', text))
 
 
+def _norm_frr(text: str) -> list[str]:
+    skip = ("Building configuration", "Current configuration", "frr version", "!", "end")
+    return [line.rstrip() for line in text.splitlines() if line.strip() and not line.strip().startswith(skip)]
+
+
+_reference_cache: dict[str, list[str]] = {}
+
+
+def _reference_frr(r: str, want: Path) -> list[str]:
+    """What FRR itself prints for the bundle's file, from a fresh router started with it. Comparing
+    the live router with this, rather than with the file, keeps FRR's own formatting (version
+    string, profile defaults such as `no bgp deterministic-med`) from counting as drift, which is
+    what the first prod run reported (42827614277)."""
+    if r in _reference_cache:
+        return _reference_cache[r]
+    d = (want / "routers" / r).resolve()
+    name = f"pp-ref-{r}"
+    run(["docker", "rm", "-f", name])
+    run(["docker", "run", "-d", "--name", name, "--network", "none", "-v", f"{d / 'frr.conf'}:/etc/frr/frr.conf",
+         "-v", f"{d / 'daemons'}:/etc/frr/daemons", "-v", f"{d / 'vtysh.conf'}:/etc/frr/vtysh.conf", ROUTER_IMAGE])
+    try:
+        out = ""
+        for _ in range(30):
+            res = run(["docker", "exec", name, "vtysh", "-c", "show running-config"])
+            if res.returncode == 0 and "router bgp" in res.stdout:
+                out = res.stdout
+                break
+            time.sleep(1)
+        _reference_cache[r] = _norm_frr(out)
+        return _reference_cache[r]
+    finally:
+        run(["docker", "rm", "-f", name])
+
+
 def _frr_drift(r: str, want: Path) -> list[str]:
-    c = lab.container(r)
-    lab.run(["docker", "cp", str(want / "routers" / r / "frr.conf"), f"{c}:/tmp/want-frr.conf"])
-    out = lab.run(["docker", "exec", c, "/usr/lib/frr/frr-reload.py", "--test", "/tmp/want-frr.conf"], check=False).stdout
-    lines, section = [], None
-    for line in out.splitlines():
-        if line.startswith("Lines To Delete") or line.startswith("Lines To Add"):
-            section = line
-            continue
-        if section and line.strip() and not set(line.strip()) <= {"="}:
-            lines.append(f"{section.split()[2].lower()}: {line.strip()}")
-    return lines
+    import difflib
+    live = _norm_frr(lab.dexec(r, "vtysh", "-c", "show running-config").stdout)
+    ref = _reference_frr(r, want)
+    return [line for line in difflib.unified_diff(ref, live, "bundle", "running", lineterm="", n=0)
+            if line.startswith(("+", "-")) and not line.startswith(("+++", "---"))]
 
 
 def _nft_drift(r: str, want: Path) -> bool:
@@ -209,11 +256,13 @@ def main() -> int:
     ap.add_argument("--dest", type=Path)
     ap.add_argument("--running", type=Path)
     ap.add_argument("--new", type=Path)
+    ap.add_argument("--from-run")
+    ap.add_argument("--to-run")
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
     a.work.mkdir(parents=True, exist_ok=True)
     if a.cmd == "fetch":
-        res = fetch(a.work)
+        res = fetch(a.work, a.from_run or None, a.to_run or None)
     elif a.cmd == "verify":
         res = verify(json.loads((a.work / "fetched.json").read_text()), a.work)
     elif a.cmd == "extract":
