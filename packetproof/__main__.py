@@ -11,27 +11,53 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
+import jsonschema
 import yaml
 
 from . import faults, render_lab
 from .model import ROOT, Network
 
 
+def _status(result: str, detail: str = "") -> None:
+    """Gate 3 needs to tell a change the generator rejects (a catch: the intent is invalid) from a
+    harness failure (a fault that could not be planted: void, re-run). PP_RENDER_STATUS names the
+    file that says which."""
+    path = os.environ.get("PP_RENDER_STATUS")
+    if path:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).write_text(json.dumps({"result": result, "detail": detail[-800:]}) + "\n")
+
+
 def cmd_render(args: argparse.Namespace) -> int:
     data = yaml.safe_load(Path(args.network).read_text())
     fault = None
     if args.fault:
-        fault = faults.load_faults()[args.fault]
-        data = faults.apply_intent(data, fault)
-    net = Network(data)
+        try:
+            fault = faults.load_faults()[args.fault]
+            data = faults.apply_intent(data, fault)
+        except Exception as exc:
+            _status("crashed", f"planting {args.fault} in the intent failed: {exc!r}")
+            raise
+    try:
+        net = Network(data)
+    except (jsonschema.ValidationError, ValueError) as exc:
+        _status("rejected", str(exc).splitlines()[0])
+        print(f"intent rejected: {exc}", file=sys.stderr)
+        return 3
     out = Path(args.out)
-    render_lab.render(net, out)
-    if fault:
-        faults.apply_render(out, fault)
-        (out / "fault.json").write_text(json.dumps(fault, indent=2) + "\n")
+    try:
+        render_lab.render(net, out)
+        if fault:
+            faults.apply_render(out, fault)
+            (out / "fault.json").write_text(json.dumps(fault, indent=2) + "\n")
+    except Exception as exc:
+        _status("crashed", f"rendering failed: {exc!r}")
+        raise
+    _status("ok")
     print(f"rendered {'with ' + args.fault if args.fault else 'baseline'} into {out}")
     return 0
 

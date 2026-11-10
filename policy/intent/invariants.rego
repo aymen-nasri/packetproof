@@ -174,6 +174,16 @@ deny contains msg if {
 	msg := sprintf("INV-11: outside view %s publishes private address %s", [label, value])
 }
 
+# Names, not only values: `db: 198.51.100.65` in the outside view would make db.packetproof.example
+# resolve from the outside with a public value (review of v1.0.0). Only these two are published.
+published_outside := {"www", "ns1"}
+
+deny contains msg if {
+	some label, _ in input.dns.outside
+	not label in published_outside
+	msg := sprintf("INV-11: the outside view publishes the name %s; only www and ns1 are public", [label])
+}
+
 # ---- INV-12: the allowed flows are exactly these ----------------------------------------------
 expected_flows := {
 	"users-to-web": {"from": {"zone:lan-a", "zone:lan-b"}, "to": {"host:haproxy"}, "tcp": {443}, "udp": set()},

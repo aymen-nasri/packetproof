@@ -190,13 +190,13 @@ scored, not used as a rule.
 | F02 | BGP | Wrong remote AS for the tunnel peer on rtr-b (65003 instead of 65001) | intent | Gate 1 |
 | F03 | BGP | Typo in rtr-b's export prefix-list: 172.24.10.0/25 instead of /24, so LAN-B vanishes from site A | intent | Gate 1 |
 | F04 | BGP | rtr-b advertises its own uplink /31 over the tunnel: recursive routing breaks the tunnel | intent | Gate 2 |
-| F05 | Routing | Static route on rtr-b for 172.16.0.0/16 via isp: lower distance than BGP, so site-to-site traffic leaves in clear and dies | intent | Gate 2 |
+| F05 | Routing | Static route on rtr-b for 172.16.0.0/16 via isp: lower distance than BGP, so site-to-site traffic leaves in clear and dies (superseded by amendment A2) | intent | Gate 2 |
 | F06 | BGP | Inbound route-map removed for the tunnel peer on rtr-a: session Established, zero prefixes accepted | template | Gate 1 |
 | F07 | BGP | rtr-a sends a default route to rtr-b: site B's internet traffic hairpins through site A | intent | Gate 2 |
 | F08 | WireGuard | AllowedIPs on rtr-a lists only the tunnel address, not LAN-B: BGP up, data dropped | intent | Gate 2 |
 | F09 | WireGuard | Wrong peer public key on rtr-b: no handshake | intent | Gate 2 |
 | F10 | WireGuard | Wrong endpoint port on rtr-a (51821): no handshake | intent | Gate 2 |
-| F11 | MTU | ICMP "fragmentation needed" dropped by rtr-a's forward chain: small pings cross the tunnel, large TCP transfers hang | template | Gate 2 |
+| F11 | MTU | ICMP "fragmentation needed" dropped by rtr-a's forward chain: small pings cross the tunnel, large TCP transfers hang (effect corrected by amendment A2) | template | Gate 2 |
 | F12 | Firewall | Hole into the DB zone: TCP 5432 accepted from any zone, not just APP | intent | Gate 1 |
 | F13 | Firewall | A broad accept from DMZ to 172.16.0.0/16 placed above the specific drops (shadowing) | template | Gate 2 |
 | F14 | Firewall | Forward-chain default policy changed from drop to accept on rtr-a | template | Gate 1 |
@@ -289,3 +289,46 @@ stays on record as NO-GO for test A under the original setup.
 **Why this and not a narrower check.** Counting only BGP-learned routes would also have passed, but
 it would have weakened the check: it would stop seeing a private prefix that reaches isp by any
 other means. Moving the management network keeps the check strict.
+
+### A2 (2026-11-10, after an independent review of v1.0.0): what Gate 3 may count, and fault F05
+
+**What happened.** A review of the v1.0.0 code, split into four independent areas, found three
+things that touch this method:
+
+1. Gate 3 counted every failure in a fault's own job as a catch, including failures that are not
+   the network's: Batfish not answering, a setup step failing, a fault that could not be planted,
+   a lab that did not deploy. The baseline runs on another runner, so "the baseline passed in the
+   same run" does not exclude them. No published result depended on this: no fault in any run was
+   graded on such a failure, and re-grading run 42877631728 under the rules below gives the same
+   verdict for every fault and every attack path.
+2. F05 could never bite. A static 172.16.0.0/16 on rtr-b loses to the /24s that rtr-b learns over
+   the tunnel, because the longest prefix wins before administrative distance is compared. Its
+   description ("site-to-site traffic leaves in clear") was false. Gate 1 caught it (INV-07) in
+   every run; Gate 2 passed it.
+3. F11's description says small pings cross the tunnel while large transfers hang. The tunnel's own
+   "fragmentation needed" messages are sent by the routers themselves, through the output hook, so
+   F11's forward-chain drop can only affect the 1400-byte path to the outside, which is the path
+   Gate 2 tests.
+
+**Changes.**
+
+- A gate result is one of: passed, failed, or **could not judge**. "Could not judge" covers a tool
+  that did not run (an exception, a failed self-test, a failing policy unit test), a fault that
+  could not be planted, missing results, a lab that did not deploy, and a Gate 2 run in which every
+  test errored. A fault whose Gate 1 could not judge, or whose Gate 1 passed while Gate 2 could not
+  judge, is **void and re-run**, exactly like a run whose baseline failed. A real Gate 1 failure
+  next to a tool error is still a catch. A change the generator rejects (schema or reference
+  validation) is still a Gate 1 catch.
+- The headline counts related catches. Incidental catches are reported next to it, as Part 6
+  already requires; no run so far has had one.
+- An attack path whose probe could not run is reported as "not run", not "open", and the scorecard
+  refuses to publish unless all 12 attack paths were scored.
+- F05 becomes: static route on rtr-b for the DMZ, 172.16.20.0/24, via isp. It has the same length
+  as the route learned over the tunnel and a lower distance, so site B's traffic to the DMZ leaves
+  in clear and dies at the ISP. Its row in Part 4 stays as written and is marked as superseded. It
+  is scored again from the next run on, and its earlier verdicts stay on record.
+- F11's expected effect is corrected as in point 3. The fault itself is unchanged.
+
+**What did not change.** Every other fault, invariant, attack path and pass rule stays word for
+word as written. Every run before this amendment stays on record as published.
+
