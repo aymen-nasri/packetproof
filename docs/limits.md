@@ -13,7 +13,7 @@ a CI run, a planted fault or a week-1 result; run numbers are in [scorecard.md](
 | `vtysh --dryrun` | FRR syntax | meaning. It can exit 0 without checking anything, so Gate 1 first proves it rejects a broken config | week 1, test B |
 | Batfish | FRR configs (as Cumulus files): parsing, BGP session compatibility, routes, route leaks | nftables, WireGuard, DNS, TLS, HAProxy. It reports the BGP session over `wg0` as established even when the tunnel is down, and does not model WireGuard keys, endpoints or AllowedIPs. Its grammar lacks `exit`, `log stdout` and `bgp ebgp-requires-policy`, so the snapshot leaves those lines out | week 1 B2; F08, F09, F10 |
 
-## Gate 2: the live copy (about six minutes)
+## Gate 2: the live copy (about six and a half minutes)
 
 | Sees | Cannot see | Evidence |
 |---|---|---|
