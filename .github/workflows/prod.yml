@@ -78,6 +78,9 @@ jobs:
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py extract --bundle "$from" --dest prod/run/from --out results/extract-from.json
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py extract --bundle "$to" --dest prod/run/to --out results/extract-to.json
           "$RUNNER_TEMP/venv/bin/python" -m packetproof deploy --render prod/run/from/lab
+      - name: 3b. Drift check before the change, against the previous bundle
+        # A baseline for 5a: what differs after the apply but not before was introduced by it.
+        run: '"$RUNNER_TEMP/venv/bin/python" scripts/prod.py drift --new prod/run/from/lab --out results/drift-before.json || true'
       - name: 4. Apply the new bundle in place while probes count failures
         run: >-
           "$RUNNER_TEMP/venv/bin/python" scripts/prod.py apply --running prod/run/from/lab
@@ -104,13 +107,15 @@ jobs:
           def load(n):
               p = r / n
               return json.loads(p.read_text()) if p.exists() else {}
-          v, a, d = load("verify.json"), load("apply.json"), load("drift.json")
+          v, a, d, d0 = load("verify.json"), load("apply.json"), load("drift.json"), load("drift-before.json")
           print("### Prod change")
           print(f"- bundles verified: {v.get('ok')}; tampered bundle refused: {v.get('tampered', {}).get('refused')}")
           print(f"- in-place apply took {a.get('apply_seconds')} s; failed requests: {a.get('requests_failed')}; "
                 f"TCP connections broken: {a.get('connections_broken')}")
           print(f"- probes: `{json.dumps(a.get('probes'))}`")
+          print(f"- drift before the change: {json.dumps(d0.get('routers'))}")
           print(f"- drift self-test: {d.get('self_test')}; no drift after the change: {d.get('ok')}")
+          print(f"- drift after the change: {json.dumps(d.get('routers'))}")
           PY
           python3 scripts/junit_summary.py results/gate2-after-change.xml "Gate 2 after the change" >> "$GITHUB_STEP_SUMMARY" || true
       - name: Collect evidence and destroy
