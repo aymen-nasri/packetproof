@@ -23,8 +23,14 @@ def test_round_robin_reaches_both_backends(lab):
 def test_one_backend_down_is_routed_around(lab):
     lab.sh("app2", "pkill -f pp-app.py")
     try:
-        time.sleep(4)  # health checks every second, two failures mark it down
-        seen = _backends(lab)
+        # Health checks run every second and two failures mark app2 down: wait for that, then
+        # require ten requests in a row to land on app1.
+        seen = []
+        for _ in range(15):
+            time.sleep(1)
+            seen = _backends(lab)
+            if all(s == "app1" for s in seen):
+                break
         assert all(s == "app1" for s in seen), f"with app2 down: {seen}"
     finally:
         lab.bg("app2", "python3 /usr/local/bin/pp-app.py --name app2 --port 8080 >/tmp/app.log 2>&1")

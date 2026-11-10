@@ -59,9 +59,15 @@ class Lab:
         return self._probe(self.dmz(f"pp-probe.py tcp {ip} {port} --timeout {timeout}"), f"dmz->{ip}:{port}")
 
     def nmap_from_dmz(self, target: str) -> str:
-        res = self.dmz(f"nmap -Pn -sT -n -T4 --max-retries 1 --host-timeout 60s --top-ports 100 {target}", timeout=180)
+        # A zone of dropped ports answers nothing, so nmap's congestion control never speeds up and
+        # every host used to hit the 60 s host timeout before a single port was reported (seen in
+        # PR #19's first run: v1.0.0's scans finished no host). --min-rate keeps probes flowing.
+        res = self.dmz(f"nmap -Pn -sT -n -T4 --top-ports 100 --min-rate 1000 --max-retries 1 "
+                       f"--max-rtt-timeout 400ms --host-timeout 150s {target}", timeout=300)
         if "Nmap done" not in res.stdout:
             raise RuntimeError(f"nmap from the DMZ did not run: {res.stdout[-300:]!r} {res.stderr[-300:]!r}")
+        if "host timeout" in res.stdout:  # a timed-out host prints no port table: not "nothing open"
+            raise RuntimeError(f"nmap from the DMZ did not finish a host: {res.stdout[-300:]!r}")
         return res.stdout
 
     def spoof_from(self, where: str, src: str, dst: str, port: int) -> None:
@@ -83,11 +89,16 @@ class Lab:
         return self.sh(src, f"curl -sS --max-time {timeout} --cacert {ROOT_CA} {extra} '{url}'", timeout=timeout + 10)
 
     def vtysh_json(self, router: str, cmd: str) -> dict:
-        out = self.sh(router, f"vtysh -c '{cmd} json'").stdout
+        """FRR's JSON answer. A failed or empty answer raises: an empty dict would make a check
+        for "nothing leaked" pass on a router whose FRR is down."""
+        res = self.sh(router, f"vtysh -c '{cmd} json'")
         try:
-            return json.loads(out or "{}")
+            data = json.loads(res.stdout)
         except json.JSONDecodeError:
-            return {}
+            data = None
+        if res.returncode != 0 or not isinstance(data, dict):
+            raise RuntimeError(f"vtysh on {router} did not answer '{cmd}': {res.stdout[-200:]!r} {res.stderr[-200:]!r}")
+        return data
 
     def routes(self, router: str) -> dict[str, dict]:
         out = {}
@@ -103,12 +114,30 @@ class Lab:
         return sum(int(x) for x in re.findall(r"counter packets (\d+)", out))
 
     def capture(self, node: str, name: str, bpf: str, seconds: int) -> None:
-        self.sh(node, f"rm -f /tmp/{name}.pcap")
-        self.bg(node, f"timeout {seconds} tcpdump -ni eth1 -w /tmp/{name}.pcap '{bpf}'")
-        time.sleep(1.5)
+        """Start a packet capture and return once it is really running. -U writes each packet at
+        once, so the file is complete when tcpdump exits."""
+        self.sh(node, f"rm -f /tmp/{name}.pcap /tmp/{name}.cap.log")
+        self.bg(node, f"timeout {seconds} tcpdump -U -ni eth1 -w /tmp/{name}.pcap '{bpf}' 2>/tmp/{name}.cap.log")
+        for _ in range(50):
+            if "listening on" in self.sh(node, f"cat /tmp/{name}.cap.log 2>/dev/null").stdout:
+                return
+            time.sleep(0.1)
+        raise RuntimeError(f"capture {name} on {node} did not start: {self.sh(node, f'cat /tmp/{name}.cap.log').stdout!r}")
 
     def captured(self, node: str, name: str) -> list[str]:
-        return [line for line in self.sh(node, f"tcpdump -nr /tmp/{name}.pcap 2>/dev/null").stdout.splitlines() if line]
+        """Packets of a finished capture. A capture that is still running, missing or unreadable
+        raises, so "nothing was seen" always means a capture really looked."""
+        for _ in range(100):
+            # [t]cpdump: the pattern must not match the shell that runs pgrep itself.
+            if self.sh(node, f"pgrep -f '[t]cpdump -U -ni eth1 -w /tmp/{name}.pcap'").returncode != 0:
+                break
+            time.sleep(0.1)
+        else:
+            raise RuntimeError(f"capture {name} on {node} did not finish")
+        res = self.sh(node, f"tcpdump -nr /tmp/{name}.pcap")
+        if res.returncode != 0:
+            raise RuntimeError(f"capture {name} on {node} is unreadable: {res.stderr[-300:]!r}")
+        return [line for line in res.stdout.splitlines() if line]
 
     def host(self, name: str) -> str:
         return next(h["address"] for h in self.intent["hosts"] if h["name"] == name)
