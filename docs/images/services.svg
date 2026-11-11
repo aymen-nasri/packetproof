@@ -27,7 +27,7 @@
 <line x1="480" y1="186" x2="480" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
 <line x1="658" y1="186" x2="658" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
 <line x1="836" y1="186" x2="836" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
-<text x="44" y="216" class="s" font-size="10.5" fill="#818b98" font-weight="600" letter-spacing="0.06em">BEFORE ANY USER ARRIVES, AND AT EVERY RENEWAL</text>
+<text x="44" y="216" class="s" font-size="10.5" fill="#818b98" font-weight="600" letter-spacing="0.06em">AT START-UP, BEFORE ANY USER ARRIVES (THE CERTIFICATE IS ISSUED ONCE PER LAB)</text>
 <path d="M485,240 L830,240" fill="none" stroke="#0b7a75" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a0b7a75)"/>
 <rect x="505" y="219" width="291.405" height="16" rx="4" fill="#f6f8fa"/>
 <text x="510" y="231" class="s" font-size="11.5" fill="#1f2328">ACME order for www.packetproof.example (tcp 9000)</text>
