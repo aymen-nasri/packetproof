@@ -341,7 +341,7 @@ word as written. Every run before this amendment stays on record as published.
 
 Wording-only edits. None changes a rule, threshold, check, fault, attack path or result.
 
-### E1 (2026-11-10): names that only made sense inside the project's schedule
+### E1 (2026-11-11): names that only made sense inside the project's schedule
 
 Part 1's tests were first called the "week-1 go/no-go tests", after the brief's week-by-week plan.
 They are now the feasibility tests; their topologies `w1-bgp` and `w1-wg` are `feas-bgp` and
