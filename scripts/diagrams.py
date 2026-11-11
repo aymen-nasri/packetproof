@@ -706,7 +706,7 @@ def services(s: Svg, net: Network) -> None:
     parts = [(client_b, "user at site B", "green"), (resolver, "Unbound · inside view", "teal"),
              (proxy, "HAProxy · TLS", "orange"), (" · ".join(apps), "HTTP backends", "blue"), (ca, "step-ca · ACME", "teal")]
     pa = [p[0] for p in parts]
-    msgs = [("group", "Before any user arrives, and at every renewal"),
+    msgs = [("group", "At start-up, before any user arrives (the certificate is issued once per lab)"),
             (pa[2], pa[4], f"ACME order for {fqdn} (tcp {d['pki']['port']})", 1, "teal"),
             (pa[4], pa[2], "http-01 challenge on tcp 80", 2, "teal"),
             (pa[4], pa[2], "24-hour certificate, chained to the lab root", 0, "teal", "return"),
