@@ -31,7 +31,7 @@ def test_every_router_and_host_rendered(baseline):
 
 
 def test_frr_has_no_syntax_batfish_cannot_read(baseline):
-    """Week-1 finding: Batfish's FRR grammar has no plain 'exit' and no 'log stdout'."""
+    """Feasibility finding: Batfish's FRR grammar has no plain 'exit' and no 'log stdout'."""
     for r in ("rtr-a", "rtr-b", "isp"):
         lines = (baseline / "routers" / r / "frr.conf").read_text().splitlines()
         assert "exit" not in lines and not any(line.startswith("log ") for line in lines)

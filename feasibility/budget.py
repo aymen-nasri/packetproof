@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test D: write results/D.json from the clock files and the fault-cycle results.
 
-Usage: python3 week1/budget.py --t0 F --t1 F --fault-start F --fault-end F --results results/
+Usage: python3 feasibility/budget.py --t0 F --t1 F --fault-start F --fault-end F --results results/
 """
 
 from __future__ import annotations

@@ -2,11 +2,11 @@
 """Test B: can Batfish read the generated FRR configs? (docs/method.md, part 1)
 
 Loads the rendered Cumulus-style snapshots into a running Batfish service and applies the
-five GO criteria. The w1-wg snapshot (B2) is recorded but never changes the verdict.
+five GO criteria. The feas-wg snapshot (B2) is recorded but never changes the verdict.
 
 Usage:
-  python3 week1/batfish_check.py --baseline build/w1-bgp/batfish --fault build/w1-bgp-W1-F/batfish \
-      --wg build/w1-wg/batfish --out results/B.json [--evidence DIR] [--routes-only]
+  python3 feasibility/batfish_check.py --baseline build/feas-bgp/batfish --fault build/feas-bgp-FEAS-F/batfish \
+      --wg build/feas-wg/batfish --out results/B.json [--evidence DIR] [--routes-only]
 
 --routes-only asks only the routes question of the fault snapshot (used by the time-budget test).
 """
@@ -32,7 +32,7 @@ def connect(host: str, timeout_s: int = 240) -> Session:
     while True:
         try:
             bf = Session(host=host)
-            bf.set_network("packetproof-w1")
+            bf.set_network("packetproof-feas")
             return bf
         except Exception as exc:  # the service takes a while to start
             if time.monotonic() - start > timeout_s:
@@ -81,7 +81,7 @@ def judge(base: dict, base_isp: list[str], fault_isp: list[str]) -> list[dict]:
                  "ok": bool(compat) and all(c == "UNIQUE_MATCH" for c in compat)
                  and bool(status) and all(s == "ESTABLISHED" for s in status),
                  "detail": {"configured_status": compat, "established_status": status}})
-    crit.append({"criterion": "5 planted error W1-F changes the answer (leak appears on isp)",
+    crit.append({"criterion": "5 planted error FEAS-F changes the answer (leak appears on isp)",
                  "ok": LEAK in fault_isp and LEAK not in base_isp,
                  "detail": {"baseline_isp_routes": base_isp, "fault_isp_routes": fault_isp}})
     return crit

@@ -35,5 +35,5 @@ literal address: the generator then follows the host if it moves.
 
 **Prevention, and which gate caught it.** Gate 1 passed it: no invariant says what `www` must
 resolve to. Gate 2 caught it with 19 failing tests, in DNS, TLS, NAT, proxy and monitoring. The
-lesson for interviews: when "inside and outside both broke", look for the one dependency they share.
+general lesson: when "inside and outside both broke", look for the one dependency they share.
 Here that dependency was certificate issuance.

@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1020" width="960" height="1020" role="img" aria-labelledby="t d">
+<title id="t">How the services work together</title><desc id="d">Split-horizon DNS, a private CA issuing certificates over ACME, and a health-checked proxy, followed message by message.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a0969da" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#0969da"/></marker><marker id="a0b7a75" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#0b7a75"/></marker><marker id="a1a7f37" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#1a7f37"/></marker><marker id="a59636e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#59636e"/></marker><marker id="a818b98" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#818b98"/></marker><marker id="abc4c00" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#bc4c00"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="1019" rx="14" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#1f2328">How the services work together</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#59636e">Split-horizon DNS, a private CA issuing certificates over ACME, and a health-checked proxy, followed message by message.</text>
+<rect x="24" y="100" width="912" height="468" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="126" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">INSIDE: A USER AT SITE B OPENS HTTPS://WWW.PACKETPROOF.EXAMPLE</text>
+<rect x="46" y="140" width="156" height="46" rx="9" fill="#ffffff" stroke="#1a7f37" stroke-width="1.25"/>
+<text x="124" y="160" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">client-b</text>
+<text x="124" y="176" class="s" font-size="11" fill="#59636e" text-anchor="middle">user at site B</text>
+<rect x="224" y="140" width="156" height="46" rx="9" fill="#ffffff" stroke="#0b7a75" stroke-width="1.25"/>
+<text x="302" y="160" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">resolver</text>
+<text x="302" y="176" class="s" font-size="11" fill="#59636e" text-anchor="middle">Unbound · inside view</text>
+<rect x="402" y="140" width="156" height="46" rx="9" fill="#ffffff" stroke="#bc4c00" stroke-width="1.25"/>
+<text x="480" y="160" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">haproxy</text>
+<text x="480" y="176" class="s" font-size="11" fill="#59636e" text-anchor="middle">HAProxy · TLS</text>
+<rect x="580" y="140" width="156" height="46" rx="9" fill="#ffffff" stroke="#0969da" stroke-width="1.25"/>
+<text x="658" y="160" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">app1 · app2</text>
+<text x="658" y="176" class="s" font-size="11" fill="#59636e" text-anchor="middle">HTTP backends</text>
+<rect x="758" y="140" width="156" height="46" rx="9" fill="#ffffff" stroke="#0b7a75" stroke-width="1.25"/>
+<text x="836" y="160" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">ca</text>
+<text x="836" y="176" class="s" font-size="11" fill="#59636e" text-anchor="middle">step-ca · ACME</text>
+<line x1="124" y1="186" x2="124" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<line x1="302" y1="186" x2="302" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<line x1="480" y1="186" x2="480" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<line x1="658" y1="186" x2="658" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<line x1="836" y1="186" x2="836" y2="550" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<text x="44" y="216" class="s" font-size="10.5" fill="#818b98" font-weight="600" letter-spacing="0.06em">BEFORE ANY USER ARRIVES, AND AT EVERY RENEWAL</text>
+<path d="M485,240 L830,240" fill="none" stroke="#0b7a75" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a0b7a75)"/>
+<rect x="505" y="219" width="291.405" height="16" rx="4" fill="#f6f8fa"/>
+<text x="510" y="231" class="s" font-size="11.5" fill="#1f2328">ACME order for www.packetproof.example (tcp 9000)</text>
+<circle cx="496" cy="240" r="8" fill="#0b7a75"/>
+<text x="496" y="244" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
+<path d="M831,276 L486,276" fill="none" stroke="#0b7a75" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a0b7a75)"/>
+<rect x="505" y="255" width="152.945" height="16" rx="4" fill="#f6f8fa"/>
+<text x="510" y="267" class="s" font-size="11.5" fill="#1f2328">http-01 challenge on tcp 80</text>
+<circle cx="496" cy="276" r="8" fill="#0b7a75"/>
+<text x="496" y="280" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">2</text>
+<path d="M831,312 L486,312" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="5 4" marker-end="url(#a818b98)"/>
+<rect x="489" y="291" width="229.19" height="16" rx="4" fill="#f6f8fa"/>
+<text x="494" y="303" class="s" font-size="11.5" fill="#59636e">24-hour certificate, chained to the lab root</text>
+<text x="44" y="352" class="s" font-size="10.5" fill="#818b98" font-weight="600" letter-spacing="0.06em">A USER OPENS THE SITE</text>
+<path d="M129,376 L296,376" fill="none" stroke="#1a7f37" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a1a7f37)"/>
+<rect x="149" y="355" width="310.38" height="16" rx="4" fill="#f6f8fa"/>
+<text x="154" y="367" class="s" font-size="11.5" fill="#1f2328">A www.packetproof.example? (udp 53, across the tunnel)</text>
+<circle cx="140" cy="376" r="8" fill="#1a7f37"/>
+<text x="140" y="380" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">3</text>
+<path d="M297,412 L130,412" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="5 4" marker-end="url(#a818b98)"/>
+<rect x="133" y="391" width="164.79" height="16" rx="4" fill="#f6f8fa"/>
+<text x="138" y="403" class="s" font-size="11.5" fill="#59636e">172.16.20.10, the inside view</text>
+<path d="M129,448 L474,448" fill="none" stroke="#1a7f37" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a1a7f37)"/>
+<rect x="149" y="427" width="291.98" height="16" rx="4" fill="#f6f8fa"/>
+<text x="154" y="439" class="s" font-size="11.5" fill="#1f2328">TLS to 172.16.20.10:443, verified against the lab root</text>
+<circle cx="140" cy="448" r="8" fill="#1a7f37"/>
+<text x="140" y="452" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">4</text>
+<path d="M485,484 L652,484" fill="none" stroke="#0969da" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a0969da)"/>
+<rect x="505" y="463" width="248.74" height="16" rx="4" fill="#f6f8fa"/>
+<text x="510" y="475" class="s" font-size="11.5" fill="#1f2328">HTTP 8080, only to backends passing /health</text>
+<circle cx="496" cy="484" r="8" fill="#0969da"/>
+<text x="496" y="488" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">5</text>
+<path d="M653,520 L130,520" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="5 4" marker-end="url(#a818b98)"/>
+<rect x="133" y="499" width="182.385" height="16" rx="4" fill="#f6f8fa"/>
+<text x="138" y="511" class="s" font-size="11.5" fill="#59636e">response, back through the proxy</text>
+<rect x="24" y="588" width="912" height="304" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="614" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">OUTSIDE: SOMEONE ON THE INTERNET OPENS THE SAME SITE</text>
+<rect x="46" y="628" width="156" height="46" rx="9" fill="#ffffff" stroke="#59636e" stroke-width="1.25"/>
+<text x="124" y="648" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">outside</text>
+<text x="124" y="664" class="s" font-size="11" fill="#59636e" text-anchor="middle">on the internet</text>
+<rect x="283.333" y="628" width="156" height="46" rx="9" fill="#ffffff" stroke="#59636e" stroke-width="1.25"/>
+<text x="361.333" y="648" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">rtr-a</text>
+<text x="361.333" y="664" class="s" font-size="11" fill="#59636e" text-anchor="middle">edge · destination NAT</text>
+<rect x="520.667" y="628" width="156" height="46" rx="9" fill="#ffffff" stroke="#bc4c00" stroke-width="1.25"/>
+<text x="598.667" y="648" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">ns1</text>
+<text x="598.667" y="664" class="s" font-size="11" fill="#59636e" text-anchor="middle">NSD · outside view</text>
+<rect x="758" y="628" width="156" height="46" rx="9" fill="#ffffff" stroke="#bc4c00" stroke-width="1.25"/>
+<text x="836" y="648" class="s" font-size="13.5" fill="#1f2328" font-weight="650" text-anchor="middle">haproxy</text>
+<text x="836" y="664" class="s" font-size="11" fill="#59636e" text-anchor="middle">HAProxy · TLS</text>
+<line x1="124" y1="674" x2="124" y2="874" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<line x1="361.333" y1="674" x2="361.333" y2="874" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<line x1="598.667" y1="674" x2="598.667" y2="874" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<line x1="836" y1="674" x2="836" y2="874" stroke="#d1d9e0" stroke-width="1.25" stroke-dasharray="3 4"/>
+<path d="M129,700 L355.333,700" fill="none" stroke="#59636e" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a59636e)"/>
+<rect x="149" y="679" width="275.535" height="16" rx="4" fill="#f6f8fa"/>
+<text x="154" y="691" class="s" font-size="11.5" fill="#1f2328">A www.packetproof.example? to 198.51.100.65:53</text>
+<circle cx="140" cy="700" r="8" fill="#59636e"/>
+<text x="140" y="704" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
+<path d="M366.333,736 L592.667,736" fill="none" stroke="#bc4c00" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#abc4c00)"/>
+<rect x="370.333" y="715" width="143.17" height="16" rx="4" fill="#f6f8fa"/>
+<text x="375.333" y="727" class="s" font-size="11.5" fill="#1f2328">DNAT to 172.16.20.53:53</text>
+<path d="M593.667,772 L130,772" fill="none" stroke="#818b98" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="5 4" marker-end="url(#a818b98)"/>
+<rect x="133" y="751" width="178.245" height="16" rx="4" fill="#f6f8fa"/>
+<text x="138" y="763" class="s" font-size="11.5" fill="#59636e">198.51.100.65, the outside view</text>
+<path d="M129,808 L355.333,808" fill="none" stroke="#59636e" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a59636e)"/>
+<rect x="149" y="787" width="148.575" height="16" rx="4" fill="#f6f8fa"/>
+<text x="154" y="799" class="s" font-size="11.5" fill="#1f2328">TLS to 198.51.100.65:443</text>
+<circle cx="140" cy="808" r="8" fill="#59636e"/>
+<text x="140" y="812" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">2</text>
+<path d="M366.333,844 L830,844" fill="none" stroke="#bc4c00" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#abc4c00)"/>
+<rect x="370.333" y="823" width="149.725" height="16" rx="4" fill="#f6f8fa"/>
+<text x="375.333" y="835" class="s" font-size="11.5" fill="#1f2328">DNAT to 172.16.20.10:443</text>
+<rect x="24" y="912" width="912" height="74" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="938" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">WATCHING IT</text>
+<text x="44" y="958" class="s" font-size="12.5" fill="#1f2328">mon runs Prometheus, blackbox_exporter and Grafana in LAN-A, probing like a user: www-https, www-tls-expiry, dns-www.</text>
+<text x="44" y="976" class="s" font-size="12" fill="#59636e">Only resolver may query the internet; it forwards example.net to the outside test server. Health checks: every 1000 ms, down after 2 failures.</text>
+<text x="936" y="1006" class="s" font-size="10.5" fill="#818b98" text-anchor="end">from network.yaml · drawn by scripts/diagrams.py</text>
+</svg>

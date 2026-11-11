@@ -3,11 +3,12 @@
 #
 #   make venv            Python dependencies, installed from hash-locked files
 #   make images          the router and node images (make image-router: the router only)
-#   make unit            generator unit tests (no containers)
+#   make unit            unit tests: generator, grading, diagrams (no containers)
 #   make gate1           Gate 1: Conftest, loaded nftables, vtysh, Batfish (Batfish must be running)
 #   make test            Gate 2: render, deploy, test, collect evidence, destroy
-#   make bundle          the config bundle: the rendered lab, packed reproducibly
 #   make test FAULT=F08  the same with one planted fault
+#   make bundle          the config bundle: the rendered lab, packed reproducibly
+#   make diagrams        redraw the architecture diagrams in docs/images from the sources
 #   make lock            re-generate the hashed lock files from requirements*.in (needs uv)
 #
 # Needs Linux with Docker, containerlab and sudo for the lab targets.
@@ -22,10 +23,10 @@ FAULT    ?=
 SECRETS  ?=
 BUNDLE   ?= packetproof-config.tgz
 
-.PHONY: help venv venv-batfish images image-router render bundle unit gate1 deploy gate2 evidence destroy test lock
+.PHONY: help venv venv-batfish images image-router render bundle diagrams unit gate1 deploy gate2 evidence destroy test lock
 
 help:
-	@sed -n '1,15p' Makefile
+	@sed -n '1,16p' Makefile
 
 venv:
 	python3 -m venv $(VENV)
@@ -39,7 +40,7 @@ images: image-router
 	docker build -q -t packetproof/node:dev images/node
 
 image-router:
-	docker build -q -t packetproof/router:dev -t packetproof/router:w1 images/router
+	docker build -q -t packetproof/router:dev -t packetproof/router:feas images/router
 
 render:
 	$(PY) -m packetproof render $(if $(FAULT),--fault $(FAULT)) --out $(RENDER)
@@ -55,6 +56,9 @@ bundle:
 	tar --sort=name --format=gnu --mode=u=rwX,go=rX --mtime="@$$(git log -1 --format=%ct)" --owner=0 --group=0 --numeric-owner -C out -cf out/bundle.tar lab
 	gzip -n -c out/bundle.tar > $(BUNDLE)
 	rm -f out/bundle.tar
+
+diagrams:
+	$(PY) scripts/diagrams.py
 
 unit:
 	$(PY) -m pytest -q -p no:cacheprovider tests/unit

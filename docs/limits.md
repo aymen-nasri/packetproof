@@ -1,7 +1,7 @@
 # What each gate cannot see
 
 The most useful output of this project is not the network. It is this page. Every row is backed by
-a CI run, a planted fault or a week-1 result; run numbers are in [scorecard.md](scorecard.md).
+a CI run, a planted fault or a feasibility check; run numbers are in [scorecard.md](scorecard.md).
 
 ## Gate 1: static checks (about one minute, nothing deployed)
 
@@ -10,8 +10,8 @@ a CI run, a planted fault or a week-1 result; run numbers are in [scorecard.md](
 | JSON Schema | the structure and types of `network.yaml` | anything about meaning | |
 | Conftest on the intent | the 13 hand-written invariants, as `network.yaml` states them | template bugs: the intent can be right while the generated config is wrong | F21 (source NAT removed in the template) passed Gate 1 |
 | Conftest on the loaded rulesets | the firewall's structure as nftables actually loaded it, found by hook and device: default drop, established first, edge filter on the uplink's source addresses, reverse-path check on every zone interface | what the rules let through. A broad accept is caught only because it displaced the established/related rule. Until v1.1.0 it found chains by name, so a template that dropped a chain's hook would have passed ([review](review-v1.0.0.md)) | F13; 8 policy unit tests |
-| `vtysh --dryrun` | FRR syntax | meaning. It can exit 0 without checking anything, so Gate 1 first proves it rejects a broken config | week 1, test B |
-| Batfish | FRR configs (as Cumulus files): parsing, BGP session compatibility, routes, route leaks | nftables, WireGuard, DNS, TLS, HAProxy. It reports the BGP session over `wg0` as established even when the tunnel is down, and does not model WireGuard keys, endpoints or AllowedIPs. Its grammar lacks `exit`, `log stdout` and `bgp ebgp-requires-policy`, so the snapshot leaves those lines out | week 1 B2; F08, F09, F10 |
+| `vtysh --dryrun` | FRR syntax | meaning. It can exit 0 without checking anything, so Gate 1 first proves it rejects a broken config | [feasibility test B](feasibility.md#test-b-batfish-reads-the-generated-frr-configs) |
+| Batfish | FRR configs (as Cumulus files): parsing, BGP session compatibility, routes, route leaks | nftables, WireGuard, DNS, TLS, HAProxy. It reports the BGP session over `wg0` as established even when the tunnel is down, and does not model WireGuard keys, endpoints or AllowedIPs. Its grammar lacks `exit`, `log stdout` and `bgp ebgp-requires-policy`, so the snapshot leaves those lines out | [feasibility test B2](feasibility.md#test-b-batfish-reads-the-generated-frr-configs); F08, F09, F10 |
 
 ## Gate 2: the live copy (about four minutes since v1.1.0, six and a half before)
 
@@ -22,7 +22,7 @@ a CI run, a planted fault or a week-1 result; run numbers are in [scorecard.md](
 | Whether a probe really ran | Since v1.1.0: nothing; every probe and capture must prove it ran or the test errors. In v1.0.0 the three nmap scans (AP-01, AP-04, AP-08) timed out on every host and reported nothing, so those attack paths proved nothing | PR #19's first run |
 | Only what a test asks | Anything without a test. The tests are hand-written, which keeps them independent of the generator, but they cover the method's list and nothing more | |
 | | Hardware, real latency, real loss: containerlab "does not fully replicate the hardware characteristics" | |
-| | The runner's environment leaking in: the host's AppArmor profiles confine `wg` and `bgpd` inside privileged containers | docs/go-no-go.md; evidence file `runner-host.txt` |
+| | The runner's environment leaking in: the host's AppArmor profiles confine `wg` and `bgpd` inside privileged containers | [feasibility.md](feasibility.md); evidence file `runner-host.txt` |
 
 ### Two blind spots Gate 3 exposed, and how they were closed
 
@@ -68,9 +68,9 @@ turns `bgp deterministic-med` on before FRR ships the fix.
 
 ## Gate 3 itself
 
-- It grades only the faults its author planted. Fault types come from common real-world mistakes,
+- It grades only the faults its own author planted. Fault types come from common real-world mistakes,
   and the list and the rules were committed before any gate existed ([method.md](method.md)), but
-  the author still wrote both sides.
+  one person still wrote both sides.
 - Timing is measured on shared runners and varies; numbers are medians with ranges. A faulted lab
   is slow: its probes wait out their timeouts (F15, which drops all return traffic, took 31 minutes
   in run 42902266017).

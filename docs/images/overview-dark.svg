@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 889" width="960" height="889" role="img" aria-labelledby="t d">
+<title id="t">How a change reaches production</title><desc id="d">Every pull request is proved on a disposable copy of the whole network. Every night, the proof itself is graded.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a6e7681" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#6e7681"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="888" rx="14" fill="#0d1117" stroke="#3d444d"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#f0f6fc">How a change reaches production</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#9198a1">Every pull request is proved on a disposable copy of the whole network. Every night, the proof itself is graded.</text>
+<rect x="24" y="100" width="912" height="305" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="44" y="126" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">ON EVERY PULL REQUEST · GATES 1 AND 2 RUN IN PARALLEL</text>
+<rect x="44" y="195" width="185" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="45" y="196" width="4" height="133" rx="2" fill="#9198a1"/>
+<text x="62" y="217" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">SOURCE</text>
+<text x="62" y="238" class="s" font-size="14" fill="#f0f6fc" font-weight="600">network.yaml</text>
+<text x="62" y="258" class="s" font-size="12" fill="#9198a1">One file describes every</text>
+<text x="62" y="274.5" class="s" font-size="12" fill="#9198a1">device, zone, flow and</text>
+<text x="62" y="291" class="s" font-size="12" fill="#9198a1">service</text>
+<rect x="273" y="195" width="185" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="274" y="196" width="4" height="133" rx="2" fill="#9198a1"/>
+<text x="291" y="217" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">GENERATOR</text>
+<text x="291" y="238" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Render</text>
+<text x="291" y="258" class="s" font-size="12" fill="#9198a1">Router, firewall, DNS, PKI,</text>
+<text x="291" y="274.5" class="s" font-size="12" fill="#9198a1">proxy and lab configs</text>
+<rect x="731" y="195" width="185" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="732" y="196" width="4" height="133" rx="2" fill="#3fb950"/>
+<text x="749" y="217" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">MERGE</text>
+<text x="749" y="238" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Review and merge</text>
+<text x="749" y="258" class="s" font-size="12" fill="#9198a1">Only when every required</text>
+<text x="749" y="274.5" class="s" font-size="12" fill="#9198a1">check is green</text>
+<rect x="502" y="138" width="185" height="118.5" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="503" y="139" width="4" height="116.5" rx="2" fill="#8b97f6"/>
+<text x="520" y="160" class="s" font-size="10.5" fill="#8b97f6" font-weight="600" letter-spacing="0.06em">GATE 1 · ≈ 1 MIN</text>
+<text x="520" y="181" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Static analysis</text>
+<text x="520" y="201" class="s" font-size="12" fill="#9198a1">Schema, policy as code,</text>
+<text x="520" y="217.5" class="s" font-size="12" fill="#9198a1">nftables, FRR, Batfish</text>
+<rect x="502" y="268.5" width="185" height="118.5" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="503" y="269.5" width="4" height="116.5" rx="2" fill="#4493f8"/>
+<text x="520" y="290.5" class="s" font-size="10.5" fill="#4493f8" font-weight="600" letter-spacing="0.06em">GATE 2 · ≈ 4 MIN</text>
+<text x="520" y="311.5" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Live copy</text>
+<text x="520" y="331.5" class="s" font-size="12" fill="#9198a1">The whole network on the</text>
+<text x="520" y="348" class="s" font-size="12" fill="#9198a1">runner, tested with real</text>
+<text x="520" y="364.5" class="s" font-size="12" fill="#9198a1">traffic</text>
+<path d="M231,262.5 L270,262.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M460,262.5 L474,262.5 Q480,262.5 480,256.5 L480,203.25 Q480,197.25 486,197.25 L499,197.25" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M689,197.25 L703,197.25 Q709,197.25 709,203.25 L709,256.5 Q709,262.5 715,262.5 L728,262.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M460,262.5 L474,262.5 Q480,262.5 480,268.5 L480,321.75 Q480,327.75 486,327.75 L499,327.75" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M689,327.75 L703,327.75 Q709,327.75 709,321.75 L709,268.5 Q709,262.5 715,262.5 L728,262.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M823.5,330 L823.5,408 Q823.5,416 815.5,416 L130,416 Q122,416 122,424 L122,462" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="24" y="427" width="912" height="215" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="44" y="453" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">AFTER MERGE · PROD RUNS WEEKLY AND ON DEMAND</text>
+<rect x="44" y="465" width="156" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="45" y="466" width="4" height="133" rx="2" fill="#ab7df8"/>
+<text x="62" y="487" class="s" font-size="10.5" fill="#ab7df8" font-weight="600" letter-spacing="0.06em">SUPPLY CHAIN</text>
+<text x="62" y="508" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Build and sign</text>
+<text x="62" y="528" class="s" font-size="12" fill="#9198a1">Reproducible bundle</text>
+<text x="62" y="544.5" class="s" font-size="12" fill="#9198a1">and scanned images,</text>
+<text x="62" y="561" class="s" font-size="12" fill="#9198a1">attested and signed</text>
+<rect x="223" y="465" width="156" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="224" y="466" width="4" height="133" rx="2" fill="#3fb950"/>
+<text x="241" y="487" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">PROD · 1</text>
+<text x="241" y="508" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Verify</text>
+<text x="241" y="528" class="s" font-size="12" fill="#9198a1">Every signature</text>
+<text x="241" y="544.5" class="s" font-size="12" fill="#9198a1">checked; a tampered</text>
+<text x="241" y="561" class="s" font-size="12" fill="#9198a1">bundle must be</text>
+<text x="241" y="577.5" class="s" font-size="12" fill="#9198a1">refused</text>
+<rect x="402" y="465" width="156" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="403" y="466" width="4" height="133" rx="2" fill="#3fb950"/>
+<text x="420" y="487" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">PROD · 2</text>
+<text x="420" y="508" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Apply in place</text>
+<text x="420" y="528" class="s" font-size="12" fill="#9198a1">One atomic change per</text>
+<text x="420" y="544.5" class="s" font-size="12" fill="#9198a1">router while probes</text>
+<text x="420" y="561" class="s" font-size="12" fill="#9198a1">count failures</text>
+<rect x="581" y="465" width="156" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="582" y="466" width="4" height="133" rx="2" fill="#3fb950"/>
+<text x="599" y="487" class="s" font-size="10.5" fill="#3fb950" font-weight="600" letter-spacing="0.06em">PROD · 3</text>
+<text x="599" y="508" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Drift check, retest</text>
+<text x="599" y="528" class="s" font-size="12" fill="#9198a1">Routers must match</text>
+<text x="599" y="544.5" class="s" font-size="12" fill="#9198a1">the bundle; Gate 2</text>
+<text x="599" y="561" class="s" font-size="12" fill="#9198a1">runs again</text>
+<rect x="760" y="465" width="156" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="761" y="466" width="4" height="133" rx="2" fill="#ab7df8"/>
+<text x="778" y="487" class="s" font-size="10.5" fill="#ab7df8" font-weight="600" letter-spacing="0.06em">ON A VERSION TAG</text>
+<text x="778" y="508" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Release</text>
+<text x="778" y="528" class="s" font-size="12" fill="#9198a1">Rebuilt from the tag,</text>
+<text x="778" y="544.5" class="s" font-size="12" fill="#9198a1">byte-identical, signed,</text>
+<text x="778" y="561" class="s" font-size="12" fill="#9198a1">immutable</text>
+<path d="M202,532.5 L220,532.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M381,532.5 L399,532.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M560,532.5 L578,532.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<path d="M122,600 L122,614 Q122,622 130,622 L830,622 Q838,622 838,614 L838,603" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="5 4" marker-end="url(#a6e7681)"/>
+<rect x="24" y="664" width="912" height="191" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="44" y="690" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">EVERY NIGHT · GATE 3 GRADES GATES 1 AND 2</text>
+<rect x="44" y="702" width="200.75" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="45" y="703" width="4" height="133" rx="2" fill="#f85149"/>
+<text x="62" y="724" class="s" font-size="10.5" fill="#f85149" font-weight="600" letter-spacing="0.06em">GATE 3</text>
+<text x="62" y="745" class="s" font-size="14" fill="#f0f6fc" font-weight="600">30 planted faults</text>
+<text x="62" y="765" class="s" font-size="12" fill="#9198a1">Realistic mistakes in BGP,</text>
+<text x="62" y="781.5" class="s" font-size="12" fill="#9198a1">firewall, NAT, DNS, TLS and</text>
+<text x="62" y="798" class="s" font-size="12" fill="#9198a1">more</text>
+<path d="M246.75,769.5 L264.75,769.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="267.75" y="702" width="200.75" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="268.75" y="703" width="4" height="133" rx="2" fill="#f85149"/>
+<text x="285.75" y="724" class="s" font-size="10.5" fill="#f85149" font-weight="600" letter-spacing="0.06em">ONE RUNNER EACH</text>
+<text x="285.75" y="745" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Gates 1 and 2</text>
+<text x="285.75" y="765" class="s" font-size="12" fill="#9198a1">Run on every fault, next to an</text>
+<text x="285.75" y="781.5" class="s" font-size="12" fill="#9198a1">unfaulted baseline</text>
+<path d="M470.5,769.5 L488.5,769.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="491.5" y="702" width="200.75" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="492.5" y="703" width="4" height="133" rx="2" fill="#f85149"/>
+<text x="509.5" y="724" class="s" font-size="10.5" fill="#f85149" font-weight="600" letter-spacing="0.06em">RULES FIXED FIRST</text>
+<text x="509.5" y="745" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Grade</text>
+<text x="509.5" y="765" class="s" font-size="12" fill="#9198a1">Caught by Gate 1, only by Gate</text>
+<text x="509.5" y="781.5" class="s" font-size="12" fill="#9198a1">2, or escaped both</text>
+<path d="M694.25,769.5 L712.25,769.5" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="715.25" y="702" width="200.75" height="135" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<rect x="716.25" y="703" width="4" height="133" rx="2" fill="#f85149"/>
+<text x="733.25" y="724" class="s" font-size="10.5" fill="#f85149" font-weight="600" letter-spacing="0.06em">PUBLISHED</text>
+<text x="733.25" y="745" class="s" font-size="14" fill="#f0f6fc" font-weight="600">Scorecard</text>
+<text x="733.25" y="765" class="s" font-size="12" fill="#9198a1">Every run on GitHub Pages,</text>
+<text x="733.25" y="781.5" class="s" font-size="12" fill="#9198a1">and every escape explained</text>
+<text x="936" y="875" class="s" font-size="10.5" fill="#6e7681" text-anchor="end">drawn by scripts/diagrams.py</text>
+</svg>
