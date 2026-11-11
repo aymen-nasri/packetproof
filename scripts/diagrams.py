@@ -279,13 +279,30 @@ def overview(s: Svg, net: Network) -> None:
          ("red", "Published", "Scorecard", "Every run on GitHub Pages, and every escape explained")]
     xs5, cw5 = spread(5)
     xs4, cw4 = spread(4)
-    ch = max(row_height(a, cw5), row_height(b, cw5), row_height(c, cw4))
+    xa, cwa = spread(4, gap=44)
+    single, gates_ = [a[0], a[1], a[4]], [a[2], a[3]]
+    ch = max(row_height(single, cwa), row_height(b, cw5), row_height(c, cw4))
     lh = 38 + ch + 18
-    s.panel(24, y, 912, lh, "On every pull request")
-    card_row(s, y + 38, a, xs5, cw5, ch)
-    y2 = y + lh + 22
-    # merge -> build: down from the last card, along the gap between lanes, into the next lane's first card
-    s.path([(xs5[4] + cw5 / 2, y + 38 + ch), (xs5[4] + cw5 / 2, y2 - 11), (xs5[0] + cw5 / 2, y2 - 11),
+    # Gates 1 and 2 are separate jobs that start together, so they are drawn side by side in time:
+    # stacked in one column, with the change forking into both and both joining at the merge.
+    hs = row_height(gates_, cwa)
+    ha = max(ch, 2 * hs + 12)
+    s.panel(24, y, 912, 38 + ha + 18, "On every pull request · Gates 1 and 2 run in parallel")
+    mid = y + 38 + ha / 2
+    cy = mid - ch / 2
+    for i, (acc, k, t, bd) in zip((0, 1, 3), single):
+        s.card(xa[i], cy, cwa, ch, acc, k, t, bd, title_size=14)
+    gys = (mid - 6 - hs, mid + 6)
+    for gy, (acc, k, t, bd) in zip(gys, gates_):
+        s.card(xa[2], gy, cwa, hs, acc, k, t, bd, title_size=14)
+    s.path([(xa[0] + cwa + 2, mid), (xa[1] - 3, mid)])
+    fx, jx = xa[2] - 22, xa[2] + cwa + 22
+    for gy in gys:
+        s.path([(xa[1] + cwa + 2, mid), (fx, mid), (fx, gy + hs / 2), (xa[2] - 3, gy + hs / 2)], r=6)
+        s.path([(xa[2] + cwa + 2, gy + hs / 2), (jx, gy + hs / 2), (jx, mid), (xa[3] - 3, mid)], r=6)
+    y2 = y + 38 + ha + 18 + 22
+    # merge -> build: down from the merge card, along the gap between lanes, into the next lane's first card
+    s.path([(xa[3] + cwa / 2, cy + ch), (xa[3] + cwa / 2, y2 - 11), (xs5[0] + cw5 / 2, y2 - 11),
             (xs5[0] + cw5 / 2, y2 + 38 - 3)])
     s.panel(24, y2, 912, lh + 24, "After merge · prod runs weekly and on demand")
     card_row(s, y2 + 38, b, xs5, cw5, ch, arrows=False)
@@ -1038,7 +1055,7 @@ DIAGRAMS = {
                  "followed message by message.",
                  "from network.yaml · drawn by scripts/diagrams.py"),
     "gates": (gates, "What every pull request must pass",
-              "Two gates, cheapest first. Both are required checks: main cannot change without them.",
+              "Two gates, run in parallel on separate runners. Both are required checks: main cannot change without them.",
               "drawn by scripts/diagrams.py"),
     "grading": (grading, "Gate 3: grading the gates, every night",
                 "Each planted fault runs through Gates 1 and 2 on its own runner, next to an unfaulted baseline in the same run.",
