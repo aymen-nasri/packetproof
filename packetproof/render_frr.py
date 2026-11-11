@@ -1,6 +1,6 @@
 """FRR configs for the two site routers and the ISP.
 
-Style rules carried over from week 1 (docs/go-no-go.md): blocks end with '!' rather than 'exit'
+Style rules carried over from the feasibility checks (docs/feasibility.md): blocks end with '!' rather than 'exit'
 and there is no 'log stdout' line, because Batfish's FRR grammar has neither.
 
 Profile: `frr defaults traditional`, with the fast timers set explicitly. The datacenter profile
@@ -143,7 +143,7 @@ BATFISH_UNSUPPORTED: set[str] = set()
 
 
 def batfish_file(hostname: str, frr_conf: str, interfaces: list[str]) -> str:
-    """Cumulus concatenated format, exactly as week 1 proved Batfish reads it. The few lines
+    """Cumulus concatenated format, exactly as the feasibility checks proved Batfish reads it. The few lines
     Batfish's FRR grammar does not know are left out of the snapshot (listed above, and in
     docs/limits.md), so Batfish reads the running config minus exactly those lines."""
     frr_conf = "".join(line for line in frr_conf.splitlines(keepends=True)

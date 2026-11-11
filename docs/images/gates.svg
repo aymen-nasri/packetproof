@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 712" width="960" height="712" role="img" aria-labelledby="t d">
+<title id="t">What every pull request must pass</title><desc id="d">Two gates, run in parallel on separate runners. Both are required checks: main cannot change without them.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs></defs>
+<rect x="0.5" y="0.5" width="959" height="711" rx="14" fill="#ffffff" stroke="#d1d9e0"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#1f2328">What every pull request must pass</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#59636e">Two gates, run in parallel on separate runners. Both are required checks: main cannot change without them.</text>
+<rect x="24" y="100" width="444" height="510" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="128" class="s" font-size="10.5" fill="#4c5bd4" font-weight="600" letter-spacing="0.06em">GATE 1 · STATIC ANALYSIS · ≈ 1 MIN</text>
+<text x="44" y="152" class="s" font-size="16" fill="#1f2328" font-weight="650">Nothing is deployed</text>
+<circle cx="56" cy="178" r="10" fill="#4c5bd4"/>
+<text x="56" y="182" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
+<text x="76" y="182" class="s" font-size="13.5" fill="#1f2328" font-weight="650">Policy unit tests</text>
+<text x="76" y="200" class="s" font-size="12" fill="#59636e">The Rego policies are tested first, so a broken rule cannot wave a</text>
+<text x="76" y="216" class="s" font-size="12" fill="#59636e">change through.</text>
+<circle cx="56" cy="240" r="10" fill="#4c5bd4"/>
+<text x="56" y="244" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">2</text>
+<text x="76" y="244" class="s" font-size="13.5" fill="#1f2328" font-weight="650">Schema and references</text>
+<text x="76" y="262" class="s" font-size="12" fill="#59636e">network.yaml must match its JSON Schema and refer only to</text>
+<text x="76" y="278" class="s" font-size="12" fill="#59636e">things that exist.</text>
+<circle cx="56" cy="302" r="10" fill="#4c5bd4"/>
+<text x="56" y="306" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">3</text>
+<text x="76" y="306" class="s" font-size="13.5" fill="#1f2328" font-weight="650">Intent invariants</text>
+<text x="76" y="324" class="s" font-size="12" fill="#59636e">13 hand-written rules on the intent, such as: the database accepts</text>
+<text x="76" y="340" class="s" font-size="12" fill="#59636e">only the app zone, on 5432.</text>
+<circle cx="56" cy="364" r="10" fill="#4c5bd4"/>
+<text x="56" y="368" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">4</text>
+<text x="76" y="368" class="s" font-size="13.5" fill="#1f2328" font-weight="650">Firewall as loaded</text>
+<text x="76" y="386" class="s" font-size="12" fill="#59636e">Each ruleset is loaded by nftables, then checked: default drop,</text>
+<text x="76" y="402" class="s" font-size="12" fill="#59636e">replies first, edge filter, reverse-path check.</text>
+<circle cx="56" cy="426" r="10" fill="#4c5bd4"/>
+<text x="56" y="430" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">5</text>
+<text x="76" y="430" class="s" font-size="13.5" fill="#1f2328" font-weight="650">FRR syntax</text>
+<text x="76" y="448" class="s" font-size="12" fill="#59636e">vtysh --dryrun on every router config, after proving it rejects a</text>
+<text x="76" y="464" class="s" font-size="12" fill="#59636e">broken one.</text>
+<circle cx="56" cy="488" r="10" fill="#4c5bd4"/>
+<text x="56" y="492" class="s" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">6</text>
+<text x="76" y="492" class="s" font-size="13.5" fill="#1f2328" font-weight="650">Batfish</text>
+<text x="76" y="510" class="s" font-size="12" fill="#59636e">Parses the router configs; checks BGP sessions, routes, and leaks</text>
+<text x="76" y="526" class="s" font-size="12" fill="#59636e">to the ISP.</text>
+<rect x="44" y="550" width="404" height="44" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<text x="58" y="568" class="s" font-size="12" fill="#1f2328">The change plan is posted on the pull request:</text>
+<text x="58" y="585" class="m" font-size="12" fill="#59636e">frr-reload.py --test against the base branch</text>
+<rect x="492" y="100" width="444" height="510" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="512" y="128" class="s" font-size="10.5" fill="#0969da" font-weight="600" letter-spacing="0.06em">GATE 2 · LIVE COPY · ≈ 4 MIN</text>
+<text x="512" y="152" class="s" font-size="16" fill="#1f2328" font-weight="650">The whole network, on the runner</text>
+<text x="512" y="176" class="s" font-size="12.5" fill="#59636e">containerlab starts 15 containers and 6 zone bridges. Tests send real</text>
+<text x="512" y="193" class="s" font-size="12.5" fill="#59636e">traffic, and every probe must prove it ran, or the test errors.</text>
+<rect x="512" y="228" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="530" cy="246" r="5" fill="#1a7f37"/>
+<text x="544" y="251" class="s" font-size="12.5" fill="#1f2328" font-weight="600">Every node ready</text>
+<rect x="720" y="228" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="738" cy="246" r="5" fill="#0969da"/>
+<text x="752" y="251" class="s" font-size="12.5" fill="#1f2328" font-weight="600">BGP sessions and routes</text>
+<rect x="512" y="274" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="530" cy="292" r="5" fill="#bc4c00"/>
+<text x="544" y="297" class="s" font-size="12.5" fill="#1f2328" font-weight="600">Allow and deny matrix</text>
+<rect x="720" y="274" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="738" cy="292" r="5" fill="#cf222e"/>
+<text x="752" y="297" class="s" font-size="12.5" fill="#1f2328" font-weight="600">12 attack paths</text>
+<rect x="512" y="320" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="530" cy="338" r="5" fill="#bc4c00"/>
+<text x="544" y="343" class="s" font-size="12.5" fill="#1f2328" font-weight="600">NAT and the edge</text>
+<rect x="720" y="320" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="738" cy="338" r="5" fill="#0b7a75"/>
+<text x="752" y="343" class="s" font-size="12.5" fill="#1f2328" font-weight="600">Split-horizon DNS</text>
+<rect x="512" y="366" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="530" cy="384" r="5" fill="#8250df"/>
+<text x="544" y="389" class="s" font-size="12.5" fill="#1f2328" font-weight="600">TLS and the private CA</text>
+<rect x="720" y="366" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="738" cy="384" r="5" fill="#4c5bd4"/>
+<text x="752" y="389" class="s" font-size="12.5" fill="#1f2328" font-weight="600">MTU and path MTU</text>
+<rect x="512" y="412" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="530" cy="430" r="5" fill="#1a7f37"/>
+<text x="544" y="435" class="s" font-size="12.5" fill="#1f2328" font-weight="600">Proxy failover</text>
+<rect x="720" y="412" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="738" cy="430" r="5" fill="#1a7f37"/>
+<text x="752" y="435" class="s" font-size="12.5" fill="#1f2328" font-weight="600">Monitoring probes</text>
+<rect x="512" y="458" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="530" cy="476" r="5" fill="#59636e"/>
+<text x="544" y="481" class="s" font-size="12.5" fill="#1f2328" font-weight="600">Listening sockets</text>
+<rect x="720" y="458" width="196" height="36" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<circle cx="738" cy="476" r="5" fill="#cf222e"/>
+<text x="752" y="481" class="s" font-size="12.5" fill="#1f2328" font-weight="600">No path around the design</text>
+<rect x="512" y="508" width="404" height="44" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<text x="526" y="526" class="s" font-size="12" fill="#1f2328">Evidence from every node is kept with the run:</text>
+<text x="526" y="543" class="s" font-size="12" fill="#59636e">BGP state, routes, running config, rulesets, tunnel state</text>
+<rect x="24" y="630" width="912" height="46" rx="10" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="44" y="658" class="s" font-size="10.5" fill="#59636e" font-weight="600" letter-spacing="0.06em">ALSO REQUIRED</text>
+<rect x="150" y="642" width="125.516" height="22" rx="11" fill="#f6f8fa" stroke="#59636e" stroke-width="1"/>
+<text x="212.758" y="657.14" class="s" font-size="11.5" fill="#59636e" font-weight="600" text-anchor="middle">generator unit tests</text>
+<rect x="283.516" y="642" width="128.929" height="22" rx="11" fill="#f6f8fa" stroke="#59636e" stroke-width="1"/>
+<text x="347.98" y="657.14" class="s" font-size="11.5" fill="#59636e" font-weight="600" text-anchor="middle">Gitleaks, full history</text>
+<rect x="420.445" y="642" width="141.607" height="22" rx="11" fill="#f6f8fa" stroke="#59636e" stroke-width="1"/>
+<text x="491.248" y="657.14" class="s" font-size="11.5" fill="#59636e" font-weight="600" text-anchor="middle">zizmor workflow audit</text>
+<text x="916" y="658" class="s" font-size="12" fill="#59636e" text-anchor="end">CodeQL also runs on every pull request</text>
+<text x="936" y="698" class="s" font-size="10.5" fill="#818b98" text-anchor="end">drawn by scripts/diagrams.py</text>
+</svg>

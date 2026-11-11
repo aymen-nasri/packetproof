@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 726" width="960" height="726" role="img" aria-labelledby="t d">
+<title id="t">The zone firewall: the complete allow list</title><desc id="d">Rendered into nftables on both site routers and pinned to interfaces, so traffic for the other site must use the tunnel. Nothing else is allowed.</desc>
+<style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
+<defs><marker id="a6e7681" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0.5 L10,5 L0,9.5 z" fill="#6e7681"/></marker></defs>
+<rect x="0.5" y="0.5" width="959" height="725" rx="14" fill="#0d1117" stroke="#3d444d"/>
+<text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#f0f6fc">The zone firewall: the complete allow list</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#9198a1">Rendered into nftables on both site routers and pinned to interfaces, so traffic for the other site must use the tunnel. Nothing else is allowed.</text>
+<text x="40" y="106" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">FLOW</text>
+<text x="222" y="106" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">FROM</text>
+<text x="470" y="106" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">PORTS</text>
+<text x="612" y="106" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">TO</text>
+<rect x="24" y="118" width="912" height="38" rx="8" fill="#151b23"/>
+<text x="40" y="142" class="m" font-size="12" fill="#9198a1">users-to-web</text>
+<rect x="222" y="126" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="249.407" y="141.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-A</text>
+<rect x="282.814" y="126" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="310.221" y="141.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-B</text>
+<path d="M458,137 L602,137" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="489.447" y="127" width="65.105" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="141" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp 443</text>
+<rect x="612" y="126" width="60.9088" height="22" rx="11" fill="#3a2010" stroke="#f0883e" stroke-width="1"/>
+<text x="642.454" y="141.14" class="s" font-size="11.5" fill="#f0883e" font-weight="600" text-anchor="middle">haproxy</text>
+<text x="40" y="180" class="m" font-size="12" fill="#9198a1">users-to-dns</text>
+<rect x="222" y="164" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="249.407" y="179.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-A</text>
+<rect x="282.814" y="164" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="310.221" y="179.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-B</text>
+<path d="M458,175 L602,175" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="478.925" y="165" width="86.15" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="179" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp/udp 53</text>
+<rect x="612" y="164" width="61.884" height="22" rx="11" fill="#0b2e2d" stroke="#2ec4b6" stroke-width="1"/>
+<text x="642.942" y="179.14" class="s" font-size="11.5" fill="#2ec4b6" font-weight="600" text-anchor="middle">resolver</text>
+<rect x="24" y="194" width="912" height="38" rx="8" fill="#151b23"/>
+<text x="40" y="218" class="m" font-size="12" fill="#9198a1">users-to-internet</text>
+<rect x="222" y="202" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="249.407" y="217.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-A</text>
+<rect x="282.814" y="202" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="310.221" y="217.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-B</text>
+<path d="M458,213 L602,213" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="475.418" y="203" width="93.165" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="217" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp 80, 443</text>
+<rect x="612" y="202" width="59.5679" height="22" rx="11" fill="#212830" stroke="#9198a1" stroke-width="1"/>
+<text x="641.784" y="217.14" class="s" font-size="11.5" fill="#9198a1" font-weight="600" text-anchor="middle">internet</text>
+<text x="40" y="256" class="m" font-size="12" fill="#9198a1">admin-ssh</text>
+<rect x="222" y="240" width="50.913" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="247.457" y="255.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">admin</text>
+<path d="M458,251 L602,251" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="492.955" y="241" width="58.09" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="255" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp 22</text>
+<rect x="612" y="240" width="135.146" height="22" rx="11" fill="#212830" stroke="#9198a1" stroke-width="1"/>
+<text x="679.573" y="255.14" class="s" font-size="11.5" fill="#9198a1" font-weight="600" text-anchor="middle">every host and router</text>
+<rect x="24" y="270" width="912" height="38" rx="8" fill="#151b23"/>
+<text x="40" y="294" class="m" font-size="12" fill="#9198a1">proxy-to-app</text>
+<rect x="222" y="278" width="60.9088" height="22" rx="11" fill="#3a2010" stroke="#f0883e" stroke-width="1"/>
+<text x="252.454" y="293.14" class="s" font-size="11.5" fill="#f0883e" font-weight="600" text-anchor="middle">haproxy</text>
+<path d="M458,289 L602,289" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="485.94" y="279" width="72.12" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="293" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp 8080</text>
+<rect x="612" y="278" width="44.3304" height="22" rx="11" fill="#0e2a4a" stroke="#4493f8" stroke-width="1"/>
+<text x="634.165" y="293.14" class="s" font-size="11.5" fill="#4493f8" font-weight="600" text-anchor="middle">app1</text>
+<rect x="662.33" y="278" width="44.3304" height="22" rx="11" fill="#0e2a4a" stroke="#4493f8" stroke-width="1"/>
+<text x="684.496" y="293.14" class="s" font-size="11.5" fill="#4493f8" font-weight="600" text-anchor="middle">app2</text>
+<text x="40" y="332" class="m" font-size="12" fill="#9198a1">acme-order</text>
+<rect x="222" y="316" width="60.9088" height="22" rx="11" fill="#3a2010" stroke="#f0883e" stroke-width="1"/>
+<text x="252.454" y="331.14" class="s" font-size="11.5" fill="#f0883e" font-weight="600" text-anchor="middle">haproxy</text>
+<path d="M458,327 L602,327" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="485.94" y="317" width="72.12" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="331" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp 9000</text>
+<rect x="612" y="316" width="30.9214" height="22" rx="11" fill="#0b2e2d" stroke="#2ec4b6" stroke-width="1"/>
+<text x="627.461" y="331.14" class="s" font-size="11.5" fill="#2ec4b6" font-weight="600" text-anchor="middle">ca</text>
+<rect x="24" y="346" width="912" height="38" rx="8" fill="#151b23"/>
+<text x="40" y="370" class="m" font-size="12" fill="#9198a1">acme-challenge</text>
+<rect x="222" y="354" width="30.9214" height="22" rx="11" fill="#0b2e2d" stroke="#2ec4b6" stroke-width="1"/>
+<text x="237.461" y="369.14" class="s" font-size="11.5" fill="#2ec4b6" font-weight="600" text-anchor="middle">ca</text>
+<path d="M458,365 L602,365" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="492.955" y="355" width="58.09" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="369" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp 80</text>
+<rect x="612" y="354" width="60.9088" height="22" rx="11" fill="#3a2010" stroke="#f0883e" stroke-width="1"/>
+<text x="642.454" y="369.14" class="s" font-size="11.5" fill="#f0883e" font-weight="600" text-anchor="middle">haproxy</text>
+<text x="40" y="408" class="m" font-size="12" fill="#9198a1">app-to-db</text>
+<rect x="222" y="392" width="42.5019" height="22" rx="11" fill="#0e2a4a" stroke="#4493f8" stroke-width="1"/>
+<text x="243.251" y="407.14" class="s" font-size="11.5" fill="#4493f8" font-weight="600" text-anchor="middle">APP</text>
+<path d="M458,403 L602,403" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="485.94" y="393" width="72.12" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="407" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp 5432</text>
+<rect x="612" y="392" width="30.9214" height="22" rx="11" fill="#2a1c45" stroke="#ab7df8" stroke-width="1"/>
+<text x="627.461" y="407.14" class="s" font-size="11.5" fill="#ab7df8" font-weight="600" text-anchor="middle">db</text>
+<rect x="24" y="422" width="912" height="38" rx="8" fill="#151b23"/>
+<text x="40" y="446" class="m" font-size="12" fill="#9198a1">app-to-dns</text>
+<rect x="222" y="430" width="42.5019" height="22" rx="11" fill="#0e2a4a" stroke="#4493f8" stroke-width="1"/>
+<text x="243.251" y="445.14" class="s" font-size="11.5" fill="#4493f8" font-weight="600" text-anchor="middle">APP</text>
+<path d="M458,441 L602,441" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="478.925" y="431" width="86.15" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="445" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp/udp 53</text>
+<rect x="612" y="430" width="61.884" height="22" rx="11" fill="#0b2e2d" stroke="#2ec4b6" stroke-width="1"/>
+<text x="642.942" y="445.14" class="s" font-size="11.5" fill="#2ec4b6" font-weight="600" text-anchor="middle">resolver</text>
+<text x="40" y="484" class="m" font-size="12" fill="#9198a1">resolver-to-internet</text>
+<rect x="222" y="468" width="61.884" height="22" rx="11" fill="#0b2e2d" stroke="#2ec4b6" stroke-width="1"/>
+<text x="252.942" y="483.14" class="s" font-size="11.5" fill="#2ec4b6" font-weight="600" text-anchor="middle">resolver</text>
+<path d="M458,479 L602,479" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="478.925" y="469" width="86.15" height="20" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<text x="522" y="483" class="m" font-size="11.5" fill="#f0f6fc" text-anchor="middle">tcp/udp 53</text>
+<rect x="612" y="468" width="59.5679" height="22" rx="11" fill="#212830" stroke="#9198a1" stroke-width="1"/>
+<text x="641.784" y="483.14" class="s" font-size="11.5" fill="#9198a1" font-weight="600" text-anchor="middle">internet</text>
+<rect x="24" y="502" width="912" height="40" rx="8" fill="#3d1418" stroke="#f85149" stroke-width="1"/>
+<text x="40" y="527" class="m" font-size="12" fill="#f85149" font-weight="600">everything else</text>
+<text x="222" y="527" class="s" font-size="12.5" fill="#f85149" font-weight="600">Dropped by the default policy, and counted on the router</text>
+<rect x="24" y="568" width="444" height="118" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="44" y="594" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">PUBLISHED TO THE INTERNET (DESTINATION NAT)</text>
+<text x="44" y="629" class="m" font-size="12" fill="#f0f6fc">198.51.100.65</text>
+<text x="166" y="629" class="m" font-size="12" fill="#9198a1">tcp 443</text>
+<path d="M262,625 L300,625" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="308" y="614" width="60.9088" height="22" rx="11" fill="#3a2010" stroke="#f0883e" stroke-width="1"/>
+<text x="338.454" y="629.14" class="s" font-size="11.5" fill="#f0883e" font-weight="600" text-anchor="middle">haproxy</text>
+<text x="378.909" y="629" class="s" font-size="11.5" fill="#9198a1">on rtr-a</text>
+<text x="44" y="663" class="m" font-size="12" fill="#f0f6fc">198.51.100.65</text>
+<text x="166" y="663" class="m" font-size="12" fill="#9198a1">tcp/udp 53</text>
+<path d="M262,659 L300,659" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<rect x="308" y="648" width="37.8697" height="22" rx="11" fill="#3a2010" stroke="#f0883e" stroke-width="1"/>
+<text x="326.935" y="663.14" class="s" font-size="11.5" fill="#f0883e" font-weight="600" text-anchor="middle">ns1</text>
+<text x="355.87" y="663" class="s" font-size="11.5" fill="#9198a1">on rtr-a</text>
+<rect x="492" y="568" width="444" height="118" rx="12" fill="#151b23" stroke="#3d444d" stroke-width="1"/>
+<text x="512" y="594" class="s" font-size="10.5" fill="#9198a1" font-weight="600" letter-spacing="0.06em">LEAVING FOR THE INTERNET (SOURCE NAT)</text>
+<rect x="512" y="614" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="539.407" y="629.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-A</text>
+<rect x="572.814" y="614" width="42.5019" height="22" rx="11" fill="#0b2e2d" stroke="#2ec4b6" stroke-width="1"/>
+<text x="594.065" y="629.14" class="s" font-size="11.5" fill="#2ec4b6" font-weight="600" text-anchor="middle">SVC</text>
+<path d="M627.316,625 L665.316,625" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<text x="675.316" y="629" class="m" font-size="12" fill="#f0f6fc">198.51.100.66</text>
+<text x="780.476" y="629" class="s" font-size="11.5" fill="#9198a1">on rtr-a</text>
+<rect x="512" y="648" width="54.8138" height="22" rx="11" fill="#112d1b" stroke="#3fb950" stroke-width="1"/>
+<text x="539.407" y="663.14" class="s" font-size="11.5" fill="#3fb950" font-weight="600" text-anchor="middle">LAN-B</text>
+<path d="M578.814,659 L616.814,659" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a6e7681)"/>
+<text x="626.814" y="663" class="m" font-size="12" fill="#f0f6fc">203.0.113.66</text>
+<text x="724.654" y="663" class="s" font-size="11.5" fill="#9198a1">on rtr-b</text>
+<text x="936" y="712" class="s" font-size="10.5" fill="#6e7681" text-anchor="end">from network.yaml · drawn by scripts/diagrams.py</text>
+</svg>

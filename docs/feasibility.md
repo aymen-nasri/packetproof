@@ -1,8 +1,16 @@
-# Week-1 go/no-go results
+# Feasibility checks: can free CI runners carry this project?
 
-Recorded on 2026-11-09. The rules that judge these results are in [method.md](method.md), part 1,
-committed in [2f178eb](https://github.com/aymen-nasri/packetproof/commit/2f178eb) before any test
-code existed. One amendment (A1) was made after the first run. It is explained there and below.
+Before any of PacketProof was built, five assumptions it depends on were tested, each with a
+**GO** or **NO-GO** verdict: that containerlab, Batfish and WireGuard work on a free GitHub runner,
+that a full run fits a CI time budget, and that the lab can run on the Windows workstation used for
+development. Recorded on 2026-11-09. The rules that judge these results are in
+[method.md](method.md), part 1, committed in
+[2f178eb](https://github.com/aymen-nasri/packetproof/commit/2f178eb) before any test code existed.
+One amendment (A1) was made after the first run. It is explained there and below.
+
+The scripts are in [`feasibility/`](../feasibility) and the workflow is
+[`feasibility.yml`](../.github/workflows/feasibility.yml). It runs on demand and on any pull request
+that changes them.
 
 ## Verdicts
 
@@ -12,11 +20,11 @@ code existed. One amendment (A1) was made after the first run. It is explained t
 | B | Batfish reads the generated FRR configs | **GO** | All 5 criteria met in every run; the planted error changed Batfish's answer. [Run 4](https://github.com/aymen-nasri/packetproof/actions/runs/42707352812) |
 | C | WireGuard works inside containers | **GO** | Handshake and BGP over wg0 up in 5 of 5 runs, and the stricter tunnel-only evidence passed in 5 of 5. [Run 4](https://github.com/aymen-nasri/packetproof/actions/runs/42707352812) |
 | D | The CI time budget holds | **GO** | Full run 86.8 s (limit 900 s); one planted fault 22.9 s (limit 180 s), caught by the live check and by Batfish. [Run 4](https://github.com/aymen-nasri/packetproof/actions/runs/42707352812) |
-| E | The laptop can develop locally | **NO-GO (not attempted)** | The 1.17 GB WSL-Containerlab download was declined; the fallback applies: **development in CI only**. |
+| E | The lab runs on the Windows development workstation | **NO-GO (not attempted)** | The 1.17 GB WSL-Containerlab download was declined; the fallback applies: **development in CI only**. |
 | KVM | | Not tested, by design | Kept out of the critical path. |
 
-**What this means for week 2:** Gate 1 keeps Batfish, alongside `vtysh` and Conftest. The lab and
-tunnel design stand as planned, and every lab change is developed and checked in CI. Batfish cannot
+**What this decided:** Gate 1 keeps Batfish, alongside `vtysh` and Conftest. The lab and tunnel
+design stand as planned, and every lab change is developed and checked in CI. Batfish cannot
 see whether the WireGuard tunnel is up (see B2 below), so the tunnel is proved only by Gate 2.
 
 ## Environment
@@ -68,7 +76,7 @@ GO in all four runs, with identical answers:
 2. Zero parse warnings.
 3. Zero init issues of any kind.
 4. All four BGP session ends were `UNIQUE_MATCH` and `ESTABLISHED`.
-5. With the planted error W1-F, isp's routes gained 172.16.255.1/32 (rtr-a's loopback). The
+5. With the planted error FEAS-F, isp's routes gained 172.16.255.1/32 (rtr-a's loopback). The
    baseline did not have it.
 
 **Rendering choices made before any run, from reading Batfish's FRR grammar:** blocks end with `!`
@@ -77,7 +85,7 @@ FRR accepts both forms. This matters later: FRR 8.2 and newer write `exit` in `s
 running-config`, so a running router's config cannot be fed to Batfish as is. Configs must come
 from the generator.
 
-**B2 (recorded, not judged): Batfish cannot tell whether the tunnel is up.** For the `w1-wg`
+**B2 (recorded, not judged): Batfish cannot tell whether the tunnel is up.** For the `feas-wg`
 snapshot, Batfish parsed `wg0` with no warning or init issue, and reported the rtr-a to rtr-b
 session over it as `ESTABLISHED`. In runs 1 to 3 the real tunnel was down and that session sat in
 `Active`, yet Batfish's answer was the same. Batfish treats two /31 addresses on interfaces named
@@ -89,8 +97,7 @@ Batfish and must be caught by the live copy.**
 wrongly. With `--dryrun`, vtysh checks `frr.conf` in its config directory and ignored `-f`, so it
 checked the image's default file and still exited 0. It proved nothing. Run 4 mounts each rendered
 directory as the config directory, and all six configs exit 0 with no message. Because the wrong
-call also exited 0, week 2's Gate 1 must show that this check fails on a broken config before it is
-trusted.
+call also exited 0, Gate 1 now proves this check fails on a broken config before trusting it.
 
 ## Test C: WireGuard inside containers
 
@@ -112,11 +119,11 @@ Run 4, all 5 jobs:
 | Deploy plus checks (s) | 37.7, 38.4, 50.1, 38.1, 65.9 |
 
 Convergence over the tunnel varied more than without it (11 to 39 s against 11 to 12 s). The cause
-is not yet measured; BGP's connect-retry timer waiting for the first handshake is a likely candidate
-to check in week 3.
+was not measured; BGP's connect-retry timer waiting for the first handshake is the likely candidate.
+The project's generator later set BGP's timers explicitly.
 
-The tunnel was tested on the runner only. The laptop half of this test did not run (test E), so per
-the method the tunnel is developed in CI only.
+The tunnel was tested on the runner only. The local half of this test did not run (test E), so
+per the method the tunnel is developed in CI only.
 
 Private keys were never written to the repository or the logs. Public keys do appear in the
 evidence files (`wg show` and the setup script's trace), which is harmless but broader than the
@@ -134,10 +141,11 @@ method's wording ("keys ... never written to ... the logs").
 Runs 1 to 3 are GO by the numbers, but their full run includes the failing tunnel stage, which spent
 120 s waiting for a convergence that never came. Run 4 is the first full run in which every stage
 passed, so it is the one quoted. These are single measurements on a shared runner, from the job's
-first step to its last, not counting runner start-up. The week-1 full run is a proxy: the real PR
-gate has more nodes and tests and will be re-measured at v0.1 as a median with its range.
+first step to its last, not counting runner start-up. This full run is a proxy: the real
+pull-request gate has more nodes and tests, and its own times are measured from its runs (see the
+[README](../README.md)).
 
-## Test E: the laptop
+## Test E: local development on Windows
 
 Inventory before the test (2026-11-09): Windows 10 Pro 19045, WSL 3.0.1, WSL kernel 6.18.40.1,
 only distribution `docker-desktop` (stopped), 15.3 GB RAM with 1.9 GB free, virtualization enabled
@@ -145,6 +153,5 @@ in firmware. The method's procedure needed the 1.17 GB WSL-Containerlab download
 SHA-256 published by GitHub). It was declined, so the lab was never brought up locally.
 
 Recorded as **NO-GO (not attempted)**. The fallback applies: **all lab work runs in CI**, and the
-same scripts (`week1/lab.py`) run unchanged on any Linux host with Docker and containerlab. GitHub
-Codespaces remains an option, but it needs the `codespace` scope added to the GitHub CLI by the
-repository owner.
+same scripts (`feasibility/lab.py`) run unchanged on any Linux host with Docker and containerlab.
+GitHub Codespaces remains an option.

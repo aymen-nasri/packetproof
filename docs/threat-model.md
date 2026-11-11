@@ -73,7 +73,7 @@ TLS 1.0 and 1.1, `py/insecure-protocol`) was fixed by setting TLS 1.2 as the min
 - **The runner itself.** GitHub's hosted runners are trusted. A compromised runner could fake every
   result. The defence is reproducibility: anyone can rerun the workflows.
 - **Kernel and container escapes.** The lab uses containers, not VMs. Privileged router containers
-  share the runner's kernel, and as week 1 showed, even the host's AppArmor profiles.
+  share the runner's kernel, and as the feasibility checks showed, even the host's AppArmor profiles.
 - **Denial of service, timing and side channels.** Not tested.
 - **The grader grading itself.** One person wrote both the faults and the gates. Mitigations:
   the method was committed before any result, fault types come from common real-world mistakes,

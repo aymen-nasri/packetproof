@@ -3,11 +3,11 @@
 Every file in a PacketProof release can be checked without trusting this repository's word for
 it. You need the GitHub CLI (`gh`) and cosign 3.0 or newer: the signatures are Sigstore bundles
 (format v0.3), and the image signatures are stored as OCI referrers, which older cosign does not
-read by default. Replace `v1.0.0` with the release you
+read by default. Replace `v1.1.0` with the release you
 are checking.
 
 ```bash
-TAG=v1.0.0
+TAG=v1.1.0
 REPO=aymen-nasri/packetproof
 OIDC=https://token.actions.githubusercontent.com
 gh release download "$TAG" -R "$REPO" -D "packetproof-$TAG" && cd "packetproof-$TAG"

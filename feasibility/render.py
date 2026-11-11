@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the two week-1 labs from one description.
+"""Render the two feasibility labs from one description.
 
 The same data produces three things, so they cannot drift apart:
   - FRR configs for each router (what the live lab runs),
@@ -7,10 +7,11 @@ The same data produces three things, so they cannot drift apart:
   - a Batfish snapshot in the Cumulus "concatenated" format (what Batfish reads).
 
 Usage:
-  python3 week1/render.py --lab w1-bgp --out build/w1-bgp [--fault W1-F]
+  python3 feasibility/render.py --lab feas-bgp --out build/feas-bgp [--fault FEAS-F]
 
-This is the week-1 prototype of the generator. Week 2 replaces the dicts below with
-network.yaml and a schema; the rendering ideas carry over.
+This is the generator's first prototype, written for the feasibility checks. The project's
+generator (packetproof/) replaced the dicts below with network.yaml and a schema; the rendering
+ideas carried over.
 """
 
 from __future__ import annotations
@@ -22,14 +23,14 @@ import shutil
 from pathlib import Path
 
 FRR_VERSION = "10.7.1"
-ROUTER_IMAGE = "packetproof/router:w1"
+ROUTER_IMAGE = "packetproof/router:feas"
 HOST_IMAGE = "alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf"
 MGMT_NETWORK = "pp-mgmt"
 MGMT_SUBNET = "192.168.254.0/24"
 
-# The two week-1 topologies, exactly as docs/method.md part 1 describes them.
+# The two feasibility topologies, exactly as docs/method.md part 1 describes them.
 LABS: dict[str, dict] = {
-    "w1-bgp": {
+    "feas-bgp": {
         "routers": {
             "rtr-a": {
                 "asn": 65001,
@@ -74,7 +75,7 @@ LABS: dict[str, dict] = {
             "pings": [("client-a", "172.24.10.10"), ("client-b", "172.16.10.10")],
         },
     },
-    "w1-wg": {
+    "feas-wg": {
         "routers": {
             "rtr-a": {
                 "asn": 65001,
@@ -126,15 +127,15 @@ LABS: dict[str, dict] = {
     },
 }
 
-# Planted errors. W1-F is the week-1 error from docs/method.md: rtr-a's export prefix-list
+# Planted errors. FEAS-F is the planted error of docs/method.md, part 1: rtr-a's export prefix-list
 # is widened so that its loopback leaks to the ISP.
 FAULTS: dict[str, dict] = {
-    "W1-F": {"lab": "w1-bgp", "router": "rtr-a", "neighbor": "ISP", "direction": "out",
+    "FEAS-F": {"lab": "feas-bgp", "router": "rtr-a", "neighbor": "ISP", "direction": "out",
              "replace": ("172.16.10.0/24", "172.16.0.0/16 le 32")},
 }
 
 DAEMONS = """\
-# Rendered by week1/render.py. zebra, mgmtd and watchfrr always run.
+# Rendered by feasibility/render.py. zebra, mgmtd and watchfrr always run.
 bgpd=yes
 staticd=yes
 ospfd=no
@@ -240,7 +241,7 @@ def wg_up_script(name: str, r: dict) -> str:
     wg = r["wg"]
     allowed = ",".join(wg["allowed_ips"])
     return f"""#!/bin/sh
-# Rendered by week1/render.py for {name}. Keys come from /etc/wireguard (mounted at run time).
+# Rendered by feasibility/render.py for {name}. Keys come from /etc/wireguard (mounted at run time).
 # Every command and error goes to /tmp/wg-up.log (containerlab only reports stdout). The key
 # itself is never echoed: it is passed as a file path.
 exec >/tmp/wg-up.log 2>&1
@@ -256,7 +257,7 @@ wg show wg0 | grep -v 'private key'
 
 def clab_topology(lab_name: str, lab: dict) -> str:
     """containerlab topology. Written as YAML by hand so the file reads cleanly in review."""
-    out = ["# Rendered by week1/render.py. Do not edit by hand.", f"name: {lab_name}",
+    out = ["# Rendered by feasibility/render.py. Do not edit by hand.", f"name: {lab_name}",
            # containerlab's out-of-band management network stays outside 172.16.0.0/12, so it can
            # never be mistaken for a lab prefix (docs/method.md, amendment A1).
            "mgmt:", f"  network: {MGMT_NETWORK}", f"  ipv4-subnet: {MGMT_SUBNET}",
