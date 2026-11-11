@@ -56,9 +56,35 @@ def frr_reload_test(router: str, base: Path, new: Path) -> str:
             out = (res.stdout + res.stderr).strip()
             return f"frr-reload.py --test failed (rc {res.returncode}); plain diff instead:\n" + plain_diff(
                 d / "frr.conf", new / "routers" / router / "frr.conf")
-        return out
+        return clean_plan(out)
     finally:
         run(["docker", "rm", "-f", name])
+
+
+def clean_plan(out: str) -> str:
+    """Drop the `frr version` header from a frr-reload.py --test plan. The running router reports
+    its build (10.7.1_git) and the rendered file does not, so the plan always "adds" that line,
+    which configures nothing; left in, every pull request would show a change to every router.
+    A section with nothing else left is dropped, and a plan with no section left is no change."""
+    if "Lines To" not in out:
+        return out
+    sections: list[tuple[str, list[str]]] = []
+    lead: list[str] = []
+    lines = out.splitlines()
+    i = 0
+    while i < len(lines):
+        if lines[i].startswith("Lines To") and i + 1 < len(lines) and set(lines[i + 1].strip()) == {"="}:
+            sections.append((lines[i], []))
+            i += 2
+            continue
+        if lines[i].strip() and not lines[i].strip().startswith("frr version"):
+            (sections[-1][1] if sections else lead).append(lines[i])
+        i += 1
+    parts = lead[:]
+    for title, body in sections:
+        if body:
+            parts += ([""] if parts else []) + [title, "=" * len(title)] + body
+    return "\n".join(parts)
 
 
 def plain_diff(a: Path, b: Path) -> str:
