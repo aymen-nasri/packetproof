@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 712" width="960" height="712" role="img" aria-labelledby="t d">
-<title id="t">What every pull request must pass</title><desc id="d">Two gates, cheapest first. Both are required checks: main cannot change without them.</desc>
+<title id="t">What every pull request must pass</title><desc id="d">Two gates, run in parallel on separate runners. Both are required checks: main cannot change without them.</desc>
 <style>.s{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif}.m{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}</style>
 <defs></defs>
 <rect x="0.5" y="0.5" width="959" height="711" rx="14" fill="#ffffff" stroke="#d1d9e0"/>
 <text x="32" y="46" class="s" font-size="21" font-weight="650" fill="#1f2328">What every pull request must pass</text>
-<text x="32" y="70" class="s" font-size="13.5" fill="#59636e">Two gates, cheapest first. Both are required checks: main cannot change without them.</text>
+<text x="32" y="70" class="s" font-size="13.5" fill="#59636e">Two gates, run in parallel on separate runners. Both are required checks: main cannot change without them.</text>
 <rect x="24" y="100" width="444" height="510" rx="12" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
 <text x="44" y="128" class="s" font-size="10.5" fill="#4c5bd4" font-weight="600" letter-spacing="0.06em">GATE 1 · STATIC ANALYSIS · ≈ 1 MIN</text>
 <text x="44" y="152" class="s" font-size="16" fill="#1f2328" font-weight="650">Nothing is deployed</text>

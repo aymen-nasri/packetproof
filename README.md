@@ -24,7 +24,7 @@ are graded against 30 deliberately broken changes, and whatever they miss is pub
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/overview-dark.svg">
-    <img src="docs/images/overview.svg" width="100%" alt="How a change reaches production. On every pull request: network.yaml is rendered into configs, then checked by Gate 1 (static analysis, about 1 minute) and Gate 2 (a live copy of the network, about 4 minutes), and merged only when every required check is green. After merge: a reproducible bundle and scanned images are built, attested and signed; prod verifies every signature, applies the change in place and checks for drift; a version tag produces a byte-identical, signed, immutable release. Every night, Gate 3 runs 30 planted faults through Gates 1 and 2 and publishes a graded scorecard.">
+    <img src="docs/images/overview.svg" width="100%" alt="How a change reaches production. On every pull request: network.yaml is rendered into configs, then checked by Gate 1 (static analysis, about 1 minute) and, in parallel, Gate 2 (a live copy of the network, about 4 minutes), and merged only when every required check is green. After merge: a reproducible bundle and scanned images are built, attested and signed; prod verifies every signature, applies the change in place and checks for drift; a version tag produces a byte-identical, signed, immutable release. Every night, Gate 3 runs 30 planted faults through Gates 1 and 2 and publishes a graded scorecard.">
   </picture>
 </p>
 
@@ -38,7 +38,7 @@ Every number links to the run that produced it.
 | **Planted faults caught** | **27 of 30**: 19 by static analysis (Gate 1), 8 more only by the live copy (Gate 2) | Three Gate 3 runs with identical verdicts: [42902266017](https://github.com/aymen-nasri/packetproof/actions/runs/42902266017), [42902610699](https://github.com/aymen-nasri/packetproof/actions/runs/42902610699), [42907526683](https://github.com/aymen-nasri/packetproof/actions/runs/42907526683) |
 | **Faults that escaped** | **3**, all latent: another control or the protocol masked them, and no traffic changed | [Why, one by one](docs/limits.md#the-three-escapes-that-remain-and-why-each-changed-no-traffic) |
 | **Attack paths** | **12 of 12 blocked** from a compromised DMZ host, each while its legitimate twin passed | The same runs; [scorecard.md](docs/scorecard.md) |
-| **Live tests per change** | **137**, against 15 containers on 6 zone bridges | [Gate 2 on main](https://github.com/aymen-nasri/packetproof/actions/runs/42919542618) |
+| **Live tests per change** | **137**, against 15 containers and 6 zone bridges | [Gate 2 on main](https://github.com/aymen-nasri/packetproof/actions/runs/42919542618) |
 | **Pull-request gate** | **4.1 min** median (3.9 to 4.4) | [Timing](#timing) |
 | **A change in production** | A firewall change applied in place in about **1 s**, with **0** failed requests and **0** broken TCP connections | [42836367491](https://github.com/aymen-nasri/packetproof/actions/runs/42836367491), [42838516660](https://github.com/aymen-nasri/packetproof/actions/runs/42838516660) |
 | **Latest production run** | Every signature verified and a tampered bundle refused; re-applied in 0.95 s with 0 of 449 requests failed; no drift; 137 of 137 live tests after | [42902885547](https://github.com/aymen-nasri/packetproof/actions/runs/42902885547) |
@@ -144,8 +144,9 @@ rules apply in this order:
   </picture>
 </p>
 
-Gate 1 is cheap and runs first; Gate 2 starts the whole network on the runner and tests it with
-real connections. Both are required checks, along with the generator's unit tests, Gitleaks and
+Gate 1 analyses the rendered configs without deploying anything; Gate 2 starts the whole network
+on its own runner and tests it with real connections. The two run in parallel, and both are
+required checks, along with the generator's unit tests, Gitleaks and
 zizmor: `main` cannot change without them. Each pull request also gets a change plan, the
 `frr-reload.py --test` diff against the base branch, posted as a comment.
 
